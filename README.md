@@ -29,7 +29,7 @@ candidate-transformer \
   --ats      data/samples/ats.json \
   --ats      data/samples/garbage.json \
   --notes    data/samples/notes.txt \
-  --github   data/samples/github_jane.json \
+  --github   https://github.com/janedoe \
   --linkedin data/samples/linkedin_jane.json \
   --resume   data/samples/resume_jane.pdf \
   --config   data/configs/default.json \
@@ -41,7 +41,7 @@ candidate-transformer \
 ```bash
 candidate-transformer \
   --csv data/samples/recruiter.csv --ats data/samples/ats.json \
-  --notes data/samples/notes.txt --github data/samples/github_jane.json \
+  --notes data/samples/notes.txt --github https://github.com/janedoe \
   --linkedin data/samples/linkedin_jane.json --resume data/samples/resume_jane.pdf \
   --config data/configs/custom_compact.json \
   --out outputs/custom_output.json
@@ -62,8 +62,9 @@ candidate-transformer --input data/samples/recruiter.csv --input data/samples/at
 
 ```bash
 pip install -e ".[dev]"
-pytest -q          # 58 tests: normalizers, matching, merge, confidence,
+pytest -q          # 60 tests: normalizers, matching, merge, confidence,
                    # projection, validation, robustness, gold end-to-end
+                   # (gold end-to-end includes one live GitHub API call)
 ```
 
 ## How it works
@@ -118,7 +119,7 @@ confidence, so there is a single policy to tune and defend.
 ## Edge cases handled (see the samples + `tests/`)
 1. **Conflicting values** — Jane's two phones are both kept; `phones[0]` is the higher-trust CSV number; both sources appear in provenance. `years_experience` 8 (ATS) beats notes' 9 with a confidence penalty.
 2. **Garbage source** — `garbage.json` (broken JSON) is skipped with a warning; the run completes.
-3. **Duplicate person** — Jane appears in all 5 sources and is merged via email.
+3. **Duplicate person** — Jane appears in all 6 sources and is merged via email (GitHub, which has no email for this account, still links in via its profile-URL match key).
 4. **Field absent everywhere** — Sam has no phone/links; they become `null` (and `github` is *omitted* under the custom config's `on_missing: omit`).
 5. **Un-normalizable value** — "call me after 5pm" → no phone; "Summer 2018" → null start date; unknown skills (`Frobnicator` from ATS, `Leadership` from LinkedIn) → kept but discounted. Nothing is invented.
 
@@ -129,15 +130,19 @@ or RNG → **byte-stable output for identical inputs** (asserted by the gold-pro
 ## Assumptions
 - Default phone region is **US** (configurable in `normalize/phones.py`); a `+`-prefixed number ignores it.
 - Email is lower-cased and used as the primary identity key.
-- GitHub merges into a person only if the profile exposes a public **email** (the API returns one when public); otherwise it stands alone, since we match on email/phone only.
+- `--github`/`--linkedin` accept a profile URL, a bare username (GitHub only), or a cached JSON file. A URL/username live-fetches the public profile by default — no flag needed, no auth required.
+- GitHub merges into a person via a public **email** (if the API exposes one) **or** its profile URL matching a `github.com/<handle>` mention elsewhere (e.g. a resume) — so an email-less GitHub record can still link up.
 - Resume parsing targets clean single-column prose with `SKILLS` / `EXPERIENCE` / `EDUCATION` headings.
-- GitHub and LinkedIn read **cached JSON fixtures** (`data/samples/*.json`) — offline and deterministic. Swap in real exports to use real data; the LinkedIn fixture mirrors a "Save to JSON"-style export (`profileUrl`, `fullName`, `headline`, `skills[]`, `experience[]`, `education[]`).
+- LinkedIn's live fetch is best-effort (LinkedIn blocks most unauthenticated requests and the result degrades to empty); the **cached JSON export is the reliable path** for it. The fixture (`data/samples/linkedin_jane.json`) mirrors a "Save to JSON"-style export (`profileUrl`, `fullName`, `headline`, `skills[]`, `experience[]`, `education[]`).
 
 ## Deliberately descoped (under time pressure)
-- **Live API auth / rate-limits** — GitHub uses a cached JSON fixture; a guarded `--github-live` exists but is off by default.
 - **Heavy PDF/DOCX layout** — plain prose only; simple-text PDF via optional `pypdf`.
 - **Fuzzy / ML entity resolution** — deterministic exact match only (avoids wrong-but-confident merges).
 - **Full UI** — CLI only (the brief marks this lower priority).
+
+**Known limits, not descoped (both already implemented, both degrade gracefully):**
+- GitHub live fetch is unauthenticated → 60 req/hr/IP.
+- LinkedIn blocks unauthenticated live fetch (degrades to empty); its cached JSON export is the reliable path.
 
 ## Export the design to PDF
 ```bash

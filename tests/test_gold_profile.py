@@ -20,7 +20,7 @@ SOURCES = [
     ("ats", str(SAMPLES / "ats.json")),
     ("ats", str(SAMPLES / "garbage.json")),  # malformed -> skipped
     ("notes", str(SAMPLES / "notes.txt")),
-    ("github", str(SAMPLES / "github_jane.json")),
+    ("github", "https://github.com/janedoe"),  # live fetch (see DEMO_SCRIPT.md)
     ("linkedin", str(SAMPLES / "linkedin_jane.json")),
     ("resume", str(SAMPLES / "resume_jane.pdf")),
 ]
@@ -72,8 +72,10 @@ def test_linkedin_wins_headline_and_adds_experience():
 
 def test_gold_overall_confidence():
     # Exact value: pins the trust table + confidence formula + determinism.
+    # The live janedoe GitHub account is dormant (no name/email/bio), so it
+    # contributes only a links.github claim -> no core-field boost from GitHub.
     jane = _jane(build_profiles(SOURCES))
-    assert jane.overall_confidence == 0.94
+    assert jane.overall_confidence == 0.93
 
 
 def test_output_is_byte_stable():

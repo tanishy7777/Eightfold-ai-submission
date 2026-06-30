@@ -75,7 +75,7 @@ candidate-transformer --csv data/samples/recruiter.csv --ats data/samples/ats.js
 
 - Fixed tables + stable sorts + content-hash id → **byte-stable output** (gold test runs the pipeline twice and asserts equality).
 - Every projected output is **validated** against the config's declared types/required before return.
-- `pytest -q` → **55 passed** (normalizers, matching, merge, confidence, projection, validation, robustness, gold).
+- `pytest -q` → **60 passed** (normalizers, matching, merge, confidence, projection, validation, robustness, gold).
 - **Descoped honestly:** LinkedIn live fetch (no public API — URL accepted, degrades gracefully if blocked), heavy PDF/DOCX layout (sample resume is a single-column `.pdf` read via `pypdf`; rich multi-column layout out of scope), fuzzy/ML matching (exact only — avoids wrong merges), full UI (CLI).
 
 ## Close
