@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Candidate Transformer — Architecture</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 48px 40px 60px;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #f0f6fc;
+    margin-bottom: 6px;
+  }
+  .header p {
+    font-size: 13.5px;
+    color: #7d8590;
+    letter-spacing: 0.2px;
+  }
+  .header p code {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    color: #58a6ff;
+    font-size: 12.5px;
+    background: #161b22;
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* ── Main grid ── */
+  .diagram {
+    display: grid;
+    grid-template-columns: 190px 1fr 220px;
+    gap: 0 32px;
+    align-items: start;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ── Column headers ── */
+  .col-header {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: #484f58;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #21262d;
+  }
+
+  /* ── Source column ── */
+  .sources-col { padding-top: 4px; }
+  .source-group { margin-bottom: 24px; }
+  .source-group-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  .label-structured {
+    color: #58a6ff;
+    background: rgba(88, 166, 255, 0.1);
+    border: 1px solid rgba(88, 166, 255, 0.2);
+  }
+  .label-unstructured {
+    color: #bc8cff;
+    background: rgba(188, 140, 255, 0.1);
+    border: 1px solid rgba(188, 140, 255, 0.2);
+  }
+  .source-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 500;
+    border: 1px solid;
+    position: relative;
+  }
+  .source-card::after {
+    content: '→';
+    position: absolute;
+    right: -24px;
+    color: #30363d;
+    font-size: 14px;
+    font-weight: 300;
+  }
+  .source-icon {
+    font-size: 14px;
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .src-csv    { background: rgba(88,166,255,0.07);  border-color: rgba(88,166,255,0.25);  color: #79c0ff; }
+  .src-ats    { background: rgba(88,166,255,0.07);  border-color: rgba(88,166,255,0.25);  color: #79c0ff; }
+  .src-github { background: rgba(188,140,255,0.07); border-color: rgba(188,140,255,0.25); color: #d2a8ff; }
+  .src-li     { background: rgba(188,140,255,0.07); border-color: rgba(188,140,255,0.25); color: #d2a8ff; }
+  .src-resume { background: rgba(188,140,255,0.07); border-color: rgba(188,140,255,0.25); color: #d2a8ff; }
+  .src-notes  { background: rgba(188,140,255,0.07); border-color: rgba(188,140,255,0.25); color: #d2a8ff; }
+
+  /* ── Pipeline column ── */
+  .pipeline-col { padding-top: 4px; }
+  .pipeline-stages { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
+
+  .stage {
+    border-radius: 10px;
+    border: 1px solid;
+    padding: 12px 16px;
+    position: relative;
+  }
+  .stage-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .stage-desc {
+    font-size: 12px;
+    color: #7d8590;
+    line-height: 1.5;
+  }
+  .stage-desc code {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    background: rgba(255,255,255,0.05);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  .stage-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 7px;
+  }
+  .badge {
+    font-size: 10px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    padding: 2px 7px;
+    border-radius: 20px;
+    border: 1px solid;
+    font-weight: 500;
+  }
+
+  /* Stage colors */
+  .stage-detect {
+    background: rgba(30,58,138,0.3);
+    border-color: rgba(59,130,246,0.4);
+  }
+  .stage-detect .stage-title { color: #60a5fa; }
+  .stage-detect .badge { color: #93c5fd; border-color: rgba(147,197,253,0.3); background: rgba(147,197,253,0.08); }
+
+  .stage-normalize {
+    background: rgba(76,29,149,0.3);
+    border-color: rgba(139,92,246,0.4);
+  }
+  .stage-normalize .stage-title { color: #a78bfa; }
+  .stage-normalize .badge { color: #c4b5fd; border-color: rgba(196,181,253,0.3); background: rgba(196,181,253,0.08); }
+
+  .stage-match {
+    background: rgba(12,74,110,0.3);
+    border-color: rgba(14,165,233,0.4);
+  }
+  .stage-match .stage-title { color: #38bdf8; }
+  .stage-match .badge { color: #7dd3fc; border-color: rgba(125,211,252,0.3); background: rgba(125,211,252,0.08); }
+
+  .stage-merge {
+    background: rgba(120,53,15,0.3);
+    border-color: rgba(245,158,11,0.4);
+  }
+  .stage-merge .stage-title { color: #fbbf24; }
+  .stage-merge .badge { color: #fcd34d; border-color: rgba(252,211,77,0.3); background: rgba(252,211,77,0.08); }
+
+  .stage-confidence {
+    background: rgba(127,29,29,0.3);
+    border-color: rgba(239,68,68,0.4);
+  }
+  .stage-confidence .stage-title { color: #f87171; }
+  .stage-confidence .badge { color: #fca5a5; border-color: rgba(252,165,165,0.3); background: rgba(252,165,165,0.08); }
+
+  .stage-project {
+    background: rgba(6,78,59,0.3);
+    border-color: rgba(16,185,129,0.4);
+  }
+  .stage-project .stage-title { color: #34d399; }
+  .stage-project .badge { color: #6ee7b7; border-color: rgba(110,231,183,0.3); background: rgba(110,231,183,0.08); }
+
+  .stage-validate {
+    background: rgba(30,30,40,0.6);
+    border-color: rgba(99,102,241,0.4);
+  }
+  .stage-validate .stage-title { color: #818cf8; }
+  .stage-validate .badge { color: #a5b4fc; border-color: rgba(165,180,252,0.3); background: rgba(165,180,252,0.08); }
+
+  /* Arrow connector between stages */
+  .connector {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 22px;
+    color: #30363d;
+    font-size: 18px;
+    position: relative;
+  }
+  .connector::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, #21262d, #30363d);
+    transform: translateX(-50%);
+  }
+  .connector-arrow {
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid #484f58;
+    border-bottom: 2px solid #484f58;
+    transform: rotate(45deg);
+    position: relative;
+    z-index: 1;
+    background: #0d1117;
+  }
+
+  /* Trust table inset */
+  .trust-table {
+    margin-top: 8px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.07);
+    font-size: 10.5px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  .trust-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 1fr 1fr 1fr;
+    gap: 0;
+  }
+  .trust-row:first-child .trust-cell {
+    background: rgba(255,255,255,0.05);
+    color: #7d8590;
+    font-weight: 700;
+    font-size: 9.5px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .trust-cell {
+    padding: 4px 7px;
+    border-right: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    color: #e6edf3;
+  }
+  .trust-hi  { color: #34d399; }
+  .trust-mid { color: #fbbf24; }
+  .trust-lo  { color: #484f58; }
+  .trust-src { color: #7d8590; }
+
+  /* ── Output column ── */
+  .output-col { padding-top: 4px; }
+
+  .out-card {
+    border-radius: 10px;
+    border: 1px solid #21262d;
+    background: #161b22;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .out-card-header {
+    padding: 10px 14px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #21262d;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .out-card-body {
+    padding: 10px 14px;
+  }
+  .schema-field {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 11.5px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .schema-field:last-child { border-bottom: none; }
+  .field-name { color: #79c0ff; }
+  .field-type { color: #7d8590; font-size: 10.5px; }
+  .field-note { color: #484f58; font-size: 10px; font-style: italic; }
+
+  .dot-green  { width: 8px; height: 8px; border-radius: 50%; background: #238636; flex-shrink: 0; }
+  .dot-blue   { width: 8px; height: 8px; border-radius: 50%; background: #1f6feb; flex-shrink: 0; }
+  .dot-purple { width: 8px; height: 8px; border-radius: 50%; background: #6e40c9; flex-shrink: 0; }
+
+  .out-card-header.green  { color: #3fb950; background: rgba(35,134,54,0.15); }
+  .out-card-header.blue   { color: #58a6ff; background: rgba(31,111,235,0.15); }
+  .out-card-header.purple { color: #bc8cff; background: rgba(110,64,201,0.15); }
+
+  /* Config card */
+  .config-kv {
+    font-size: 11px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    line-height: 1.9;
+    color: #7d8590;
+  }
+  .config-kv .k { color: #79c0ff; }
+  .config-kv .v { color: #a5d6ff; }
+  .config-kv .s { color: #ffa657; }
+  .config-kv .b { color: #ff7b72; }
+
+  /* Arrow from pipeline to output */
+  .out-arrow {
+    text-align: center;
+    color: #30363d;
+    font-size: 13px;
+    margin: 8px 0;
+  }
+
+  /* Config inject arrow */
+  .config-inject {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: #484f58;
+    margin: 6px 0 10px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: rgba(52,211,153,0.05);
+    border: 1px solid rgba(52,211,153,0.15);
+  }
+  .config-inject-arrow { color: #34d399; font-size: 12px; }
+
+  /* Footer note */
+  .footer {
+    text-align: center;
+    margin-top: 40px;
+    font-size: 11px;
+    color: #30363d;
+    letter-spacing: 0.3px;
+  }
+  .footer span { color: #484f58; }
+
+  /* Horizontal rule between source groups */
+  .source-spacer { height: 8px; }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="header">
+  <h1>Multi-Source Candidate Data Transformer</h1>
+  <p>
+    messy inputs &nbsp;→&nbsp; one canonical profile per candidate &nbsp;·&nbsp;
+    <code>detect → extract → normalize → match → merge → confidence → project → validate</code>
+  </p>
+</div>
+
+<!-- ── Diagram ── -->
+<div class="diagram">
+
+  <!-- ── LEFT: Sources ── -->
+  <div class="sources-col">
+    <div class="col-header">Sources</div>
+
+    <div class="source-group">
+      <div class="source-group-label label-structured">Structured</div>
+      <div class="source-card src-csv">
+        <span class="source-icon">📊</span> Recruiter CSV
+      </div>
+      <div class="source-card src-ats">
+        <span class="source-icon">🗄</span> ATS JSON
+      </div>
+    </div>
+
+    <div class="source-spacer"></div>
+
+    <div class="source-group">
+      <div class="source-group-label label-unstructured">Unstructured</div>
+      <div class="source-card src-github">
+        <span class="source-icon">🐙</span> GitHub URL
+      </div>
+      <div class="source-card src-li">
+        <span class="source-icon">💼</span> LinkedIn URL
+      </div>
+      <div class="source-card src-resume">
+        <span class="source-icon">📄</span> Resume PDF/MD
+      </div>
+      <div class="source-card src-notes">
+        <span class="source-icon">📝</span> Recruiter Notes
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CENTER: Pipeline ── -->
+  <div class="pipeline-col">
+    <div class="col-header">Pipeline</div>
+    <div class="pipeline-stages">
+
+      <!-- DETECT + EXTRACT -->
+      <div class="stage stage-detect">
+        <div class="stage-title">Detect &amp; Extract</div>
+        <div class="stage-desc">
+          Route each input to its adapter. Parses raw source into
+          <code>SourceRecord</code>s — partial profiles in canonical field names
+          with per-claim <code>{source, method, raw}</code> provenance.
+          A bad source returns <code>[]</code> + warning; run never crashes.
+        </div>
+        <div class="stage-badges">
+          <span class="badge">one adapter per source</span>
+          <span class="badge">Adapter protocol</span>
+          <span class="badge">robust</span>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-arrow"></div></div>
+
+      <!-- NORMALIZE -->
+      <div class="stage stage-normalize">
+        <div class="stage-title">Normalize</div>
+        <div class="stage-desc">
+          Pure, deterministic functions per field type. Un-normalizable input
+          returns <code>None</code> — never guessed, never invented.
+        </div>
+        <div class="stage-badges">
+          <span class="badge">phones → E.164</span>
+          <span class="badge">dates → YYYY-MM</span>
+          <span class="badge">country → ISO-2</span>
+          <span class="badge">skills → canonical</span>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-arrow"></div></div>
+
+      <!-- MATCH -->
+      <div class="stage stage-match">
+        <div class="stage-title">Match</div>
+        <div class="stage-desc">
+          Cluster records that refer to the same person via connected components
+          (union-find). Keys: normalized <strong>email</strong> (primary) then
+          <strong>E.164 phone</strong> (fallback). No fuzzy name matching —
+          a wrong merge is the worst outcome.
+        </div>
+        <div class="stage-badges">
+          <span class="badge">union-find</span>
+          <span class="badge">transitive</span>
+          <span class="badge">order-independent</span>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-arrow"></div></div>
+
+      <!-- MERGE -->
+      <div class="stage stage-merge">
+        <div class="stage-title">Merge</div>
+        <div class="stage-desc">
+          Per field: scalar → trust-ranked winner. Lists → deduped union.
+          All competing claims kept in provenance. Trust table encodes
+          field-source affinity — contact info trusts CSV/ATS; experience
+          trusts LinkedIn/resume; skills trust GitHub/resume.
+        </div>
+        <div class="trust-table">
+          <div class="trust-row">
+            <div class="trust-cell">Field</div>
+            <div class="trust-cell">CSV</div>
+            <div class="trust-cell">ATS</div>
+            <div class="trust-cell">LinkedIn</div>
+            <div class="trust-cell">GitHub</div>
+          </div>
+          <div class="trust-row">
+            <div class="trust-cell trust-src">contact</div>
+            <div class="trust-cell trust-hi">0.95</div>
+            <div class="trust-cell trust-hi">0.90</div>
+            <div class="trust-cell trust-mid">0.70</div>
+            <div class="trust-cell trust-lo">0.40</div>
+          </div>
+          <div class="trust-row">
+            <div class="trust-cell trust-src">experience</div>
+            <div class="trust-cell trust-lo">0.50</div>
+            <div class="trust-cell trust-mid">0.70</div>
+            <div class="trust-cell trust-hi">0.90</div>
+            <div class="trust-cell trust-lo">0.20</div>
+          </div>
+          <div class="trust-row">
+            <div class="trust-cell trust-src">skills</div>
+            <div class="trust-cell trust-lo">0.30</div>
+            <div class="trust-cell trust-mid">0.65</div>
+            <div class="trust-cell trust-mid">0.75</div>
+            <div class="trust-cell trust-hi">0.85</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-arrow"></div></div>
+
+      <!-- CONFIDENCE -->
+      <div class="stage stage-confidence">
+        <div class="stage-title">Confidence</div>
+        <div class="stage-desc">
+          Score each field claim: <code>cᵢ = trust × method_factor</code>
+          (direct 1.0 · regex 0.8 · inferred 0.6). Agreement → noisy-OR
+          <code>1 − Π(1−cᵢ)</code>. Conflict → penalty
+          <code>× (1 − 0.5·disagree)</code>.
+          <code>overall_confidence</code> = mean over core fields.
+        </div>
+        <div class="stage-badges">
+          <span class="badge">noisy-OR</span>
+          <span class="badge">conflict penalty</span>
+          <span class="badge">[0, 1] clamped</span>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-arrow"></div></div>
+
+      <!-- PROJECT -->
+      <div class="stage stage-project">
+        <div class="stage-title">Project</div>
+        <div class="stage-desc">
+          Read-only pass over the canonical record. Runtime config shapes the
+          output — rename fields, slice arrays, re-apply normalizers, set
+          <code>on_missing</code> policy. Same engine, any output schema.
+        </div>
+        <div class="stage-badges">
+          <span class="badge">path DSL</span>
+          <span class="badge">skills[].name</span>
+          <span class="badge">emails[0]</span>
+          <span class="badge">on_missing</span>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-arrow"></div></div>
+
+      <!-- VALIDATE -->
+      <div class="stage stage-validate">
+        <div class="stage-title">Validate</div>
+        <div class="stage-desc">
+          Check projected output against config's declared <code>type</code>
+          and <code>required</code> flags before returning. Errors surface early
+          — never silently emit a malformed profile.
+        </div>
+        <div class="stage-badges">
+          <span class="badge">type checking</span>
+          <span class="badge">required fields</span>
+          <span class="badge">fail-fast</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── RIGHT: Output ── -->
+  <div class="output-col">
+    <div class="col-header">Output</div>
+
+    <!-- Canonical schema -->
+    <div class="out-card">
+      <div class="out-card-header green">
+        <div class="dot-green"></div> Canonical Profile
+      </div>
+      <div class="out-card-body">
+        <div class="schema-field">
+          <span class="field-name">candidate_id</span>
+          <span class="field-type">sha1</span>
+        </div>
+        <div class="schema-field">
+          <span class="field-name">full_name</span>
+          <span class="field-type">string</span>
+        </div>
+        <div class="schema-field">
+          <span class="field-name">emails[ ]</span>
+          <span class="field-type">string[]</span>
+        </div>
+        <div class="schema-field">
+          <span class="field-name">phones[ ]</span>
+          <span class="field-type">E.164</span>
+        </div>
+        <div class="schema-field">
+          <span class="field-name">location{ }</span>
+          <span class="field-type">ISO-2</span>
+        </div>
+        <div class="schema-field">
+          <span class="field-name">links{ }</span>
+          <span class="field-type">object</span>
+        </div>
+        <div class="schema-field">
+          <span class="field-name">headline</span>
+          <span class="field-type">string?</span>
+        </div>
+        <div class="schema-field">
+          <span class="field-name">skills[ ]</span>
+          <span class="field-type">canonical</span>
+        </div>
+        <div class="schema-field">
+          <span class="field-name">experience[ ]</span>
+          <span class="field-type">YYYY-MM</span>
+        </div>
+        <div class="schema-field">
+          <span class="field-name">education[ ]</span>
+          <span class="field-type">object</span>
+        </div>
+        <div class="schema-field">
+          <span class="field-name">provenance[ ]</span>
+          <span class="field-type">per-claim</span>
+        </div>
+        <div class="schema-field">
+          <span class="field-name">overall_confidence</span>
+          <span class="field-type">0–1</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Config card -->
+    <div class="out-card">
+      <div class="out-card-header purple">
+        <div class="dot-purple"></div> Runtime Config
+      </div>
+      <div class="out-card-body">
+        <div class="config-kv">
+          <span class="k">path</span> <span class="v">full_name</span><br>
+          <span class="k">from</span> <span class="v">emails[0]</span><br>
+          <span class="k">from</span> <span class="v">skills[].name</span><br>
+          <span class="k">normalize</span> <span class="s">E164</span><br>
+          <span class="k">on_missing</span> <span class="s">omit</span><br>
+          <span class="k">include_provenance</span> <span class="b">true</span><br>
+          <span class="k">include_confidence</span> <span class="b">true</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="config-inject">
+      <span class="config-inject-arrow">↳</span>
+      Config injects into PROJECT stage — engine unchanged
+    </div>
+
+    <!-- Design invariants -->
+    <div class="out-card">
+      <div class="out-card-header blue">
+        <div class="dot-blue"></div> Design Invariants
+      </div>
+      <div class="out-card-body">
+        <div class="schema-field" style="font-family: inherit; font-size: 11.5px; color: #7d8590;">
+          <span style="color:#f0f6fc">Deterministic</span>
+        </div>
+        <div style="font-size: 11px; color: #484f58; padding: 0 0 5px; border-bottom: 1px solid rgba(255,255,255,0.04);">
+          Fixed trust tables · stable sorts · content-hash id · no RNG
+        </div>
+        <div class="schema-field" style="font-family: inherit; font-size: 11.5px; color: #7d8590; margin-top: 5px;">
+          <span style="color:#f0f6fc">Robust</span>
+        </div>
+        <div style="font-size: 11px; color: #484f58; padding: 0 0 5px; border-bottom: 1px solid rgba(255,255,255,0.04);">
+          Bad source → <code style="font-size:10px; color:#58a6ff; background:rgba(88,166,255,0.08); padding:1px 4px; border-radius:3px;">[]</code> + warning · run always completes
+        </div>
+        <div class="schema-field" style="font-family: inherit; font-size: 11.5px; color: #7d8590; margin-top: 5px;">
+          <span style="color:#f0f6fc">Explainable</span>
+        </div>
+        <div style="font-size: 11px; color: #484f58; padding: 0 0 5px;">
+          Every value traceable to source + method · unknowns → <code style="font-size:10px; color:#58a6ff; background:rgba(88,166,255,0.08); padding:1px 4px; border-radius:3px;">null</code>, never invented
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="footer">
+  <span>candidate-transformer</span> &nbsp;·&nbsp; one trust table · one canonical record · one projection layer
+</div>
+
+</body>
+</html>

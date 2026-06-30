@@ -1,0 +1,387 @@
+[
+  {
+    "candidate_id": "cand_9fcf7f9da951",
+    "full_name": "Jane Doe",
+    "emails": [
+      "jane.doe@example.com"
+    ],
+    "phones": [
+      "+14155550142",
+      "+14155550199"
+    ],
+    "location": {
+      "city": "San Francisco",
+      "region": "CA",
+      "country": "US"
+    },
+    "links": {
+      "linkedin": "https://linkedin.com/in/janedoe",
+      "github": "https://github.com/janedoe",
+      "portfolio": null,
+      "other": []
+    },
+    "headline": "Senior Software Engineer at Acme Corp",
+    "years_experience": 8.0,
+    "skills": [
+      {
+        "name": "Docker",
+        "confidence": 0.68,
+        "sources": [
+          "resume"
+        ]
+      },
+      {
+        "name": "Frobnicator",
+        "confidence": 0.42,
+        "sources": [
+          "ats_json"
+        ]
+      },
+      {
+        "name": "Go",
+        "confidence": 0.32,
+        "sources": [
+          "recruiter_notes"
+        ]
+      },
+      {
+        "name": "JavaScript",
+        "confidence": 0.87,
+        "sources": [
+          "ats_json",
+          "resume"
+        ]
+      },
+      {
+        "name": "Kubernetes",
+        "confidence": 0.8,
+        "sources": [
+          "linkedin",
+          "recruiter_notes"
+        ]
+      },
+      {
+        "name": "Leadership",
+        "confidence": 0.49,
+        "sources": [
+          "linkedin"
+        ]
+      },
+      {
+        "name": "PostgreSQL",
+        "confidence": 0.68,
+        "sources": [
+          "resume"
+        ]
+      },
+      {
+        "name": "Python",
+        "confidence": 0.96,
+        "sources": [
+          "ats_json",
+          "linkedin",
+          "resume"
+        ]
+      },
+      {
+        "name": "React",
+        "confidence": 0.78,
+        "sources": [
+          "recruiter_notes",
+          "resume"
+        ]
+      }
+    ],
+    "experience": [
+      {
+        "company": "Acme Corp",
+        "title": "Senior Software Engineer",
+        "start": "2021-01",
+        "end": null,
+        "summary": null
+      },
+      {
+        "company": "Initech",
+        "title": "Software Engineering Intern",
+        "start": "2017-06",
+        "end": "2017-08",
+        "summary": null
+      },
+      {
+        "company": "Acme Corp",
+        "title": "Staff Engineer",
+        "start": null,
+        "end": null,
+        "summary": null
+      },
+      {
+        "company": "Globex",
+        "title": "Software Engineer",
+        "start": null,
+        "end": "2020-12",
+        "summary": null
+      }
+    ],
+    "education": [
+      {
+        "institution": "MIT",
+        "degree": "B.S.",
+        "field": "Computer Science",
+        "end_year": 2018
+      }
+    ],
+    "provenance": [
+      {
+        "field": "education",
+        "source": "linkedin",
+        "method": "direct_field"
+      },
+      {
+        "field": "education",
+        "source": "resume",
+        "method": "regex_extract"
+      },
+      {
+        "field": "emails",
+        "source": "ats_json",
+        "method": "direct_field"
+      },
+      {
+        "field": "emails",
+        "source": "linkedin",
+        "method": "direct_field"
+      },
+      {
+        "field": "emails",
+        "source": "recruiter_csv",
+        "method": "direct_field"
+      },
+      {
+        "field": "emails",
+        "source": "recruiter_notes",
+        "method": "regex_extract"
+      },
+      {
+        "field": "emails",
+        "source": "resume",
+        "method": "regex_extract"
+      },
+      {
+        "field": "experience",
+        "source": "ats_json",
+        "method": "direct_field"
+      },
+      {
+        "field": "experience",
+        "source": "linkedin",
+        "method": "direct_field"
+      },
+      {
+        "field": "experience",
+        "source": "recruiter_csv",
+        "method": "direct_field"
+      },
+      {
+        "field": "experience",
+        "source": "resume",
+        "method": "regex_extract"
+      },
+      {
+        "field": "full_name",
+        "source": "ats_json",
+        "method": "direct_field"
+      },
+      {
+        "field": "full_name",
+        "source": "linkedin",
+        "method": "direct_field"
+      },
+      {
+        "field": "full_name",
+        "source": "recruiter_csv",
+        "method": "direct_field"
+      },
+      {
+        "field": "full_name",
+        "source": "recruiter_notes",
+        "method": "regex_extract"
+      },
+      {
+        "field": "full_name",
+        "source": "resume",
+        "method": "inferred"
+      },
+      {
+        "field": "headline",
+        "source": "linkedin",
+        "method": "direct_field"
+      },
+      {
+        "field": "links.github",
+        "source": "github",
+        "method": "direct_field"
+      },
+      {
+        "field": "links.github",
+        "source": "resume",
+        "method": "regex_extract"
+      },
+      {
+        "field": "links.linkedin",
+        "source": "ats_json",
+        "method": "direct_field"
+      },
+      {
+        "field": "links.linkedin",
+        "source": "linkedin",
+        "method": "direct_field"
+      },
+      {
+        "field": "links.linkedin",
+        "source": "resume",
+        "method": "regex_extract"
+      },
+      {
+        "field": "location",
+        "source": "ats_json",
+        "method": "direct_field"
+      },
+      {
+        "field": "location",
+        "source": "linkedin",
+        "method": "direct_field"
+      },
+      {
+        "field": "phones",
+        "source": "ats_json",
+        "method": "direct_field"
+      },
+      {
+        "field": "phones",
+        "source": "recruiter_csv",
+        "method": "direct_field"
+      },
+      {
+        "field": "phones",
+        "source": "resume",
+        "method": "regex_extract"
+      },
+      {
+        "field": "skills",
+        "source": "ats_json",
+        "method": "direct_field"
+      },
+      {
+        "field": "skills",
+        "source": "linkedin",
+        "method": "direct_field"
+      },
+      {
+        "field": "skills",
+        "source": "recruiter_notes",
+        "method": "regex_extract"
+      },
+      {
+        "field": "skills",
+        "source": "resume",
+        "method": "regex_extract"
+      },
+      {
+        "field": "years_experience",
+        "source": "ats_json",
+        "method": "direct_field"
+      },
+      {
+        "field": "years_experience",
+        "source": "recruiter_notes",
+        "method": "regex_extract"
+      }
+    ],
+    "overall_confidence": 0.93
+  },
+  {
+    "candidate_id": "cand_ebe74038a67f",
+    "full_name": "Sam Lee",
+    "emails": [
+      "sam.lee@example.com"
+    ],
+    "phones": [],
+    "location": {
+      "city": null,
+      "region": null,
+      "country": "IN"
+    },
+    "links": {
+      "linkedin": null,
+      "github": null,
+      "portfolio": null,
+      "other": []
+    },
+    "headline": null,
+    "years_experience": null,
+    "skills": [
+      {
+        "name": "Machine Learning",
+        "confidence": 0.6,
+        "sources": [
+          "ats_json"
+        ]
+      },
+      {
+        "name": "Python",
+        "confidence": 0.6,
+        "sources": [
+          "ats_json"
+        ]
+      }
+    ],
+    "experience": [
+      {
+        "company": "Globex",
+        "title": "Data Scientist",
+        "start": null,
+        "end": null,
+        "summary": null
+      }
+    ],
+    "education": [],
+    "provenance": [
+      {
+        "field": "emails",
+        "source": "ats_json",
+        "method": "direct_field"
+      },
+      {
+        "field": "emails",
+        "source": "recruiter_csv",
+        "method": "direct_field"
+      },
+      {
+        "field": "experience",
+        "source": "recruiter_csv",
+        "method": "direct_field"
+      },
+      {
+        "field": "full_name",
+        "source": "ats_json",
+        "method": "direct_field"
+      },
+      {
+        "field": "full_name",
+        "source": "recruiter_csv",
+        "method": "direct_field"
+      },
+      {
+        "field": "location",
+        "source": "ats_json",
+        "method": "direct_field"
+      },
+      {
+        "field": "skills",
+        "source": "ats_json",
+        "method": "direct_field"
+      }
+    ],
+    "overall_confidence": 0.6
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "profileUrl": "https://linkedin.com/in/janedoe",
+  "fullName": "Jane Doe",
+  "email": "jane.doe@example.com",
+  "headline": "Senior Software Engineer at Acme Corp",
+  "location": "San Francisco Bay Area",
+  "skills": ["Python", "Kubernetes", "Leadership"],
+  "experience": [
+    { "title": "Senior Software Engineer", "company": "Acme Corp", "start": "Jan 2021", "end": "Present" },
+    { "title": "Software Engineering Intern", "company": "Initech", "start": "Jun 2017", "end": "Aug 2017" }
+  ],
+  "education": [
+    { "school": "MIT", "degree": "B.S.", "field": "Computer Science", "end": "2018" }
+  ]
+}

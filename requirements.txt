@@ -1,0 +1,11 @@
+# Core pipeline dependencies
+pydantic>=2.6          # canonical models + output validation
+phonenumbers>=8.13     # phone parsing -> E.164
+python-dateutil>=2.9   # forgiving date parsing -> YYYY-MM
+
+# PDF resume extraction (the sample resume is a .pdf); import still guarded so a
+# missing install degrades to a skip+warning rather than a crash.
+pypdf>=4.0             # simple-text PDF resume extraction (--resume *.pdf)
+
+# Dev / tests
+pytest>=8.0

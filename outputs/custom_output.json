@@ -1,0 +1,34 @@
+[
+  {
+    "full_name": "Jane Doe",
+    "primary_email": "jane.doe@example.com",
+    "phone": "+14155550142",
+    "skills": [
+      "Docker",
+      "Frobnicator",
+      "Go",
+      "JavaScript",
+      "Kubernetes",
+      "Leadership",
+      "PostgreSQL",
+      "Python",
+      "React"
+    ],
+    "country": "US",
+    "github": "https://github.com/janedoe",
+    "twitter": null,
+    "overall_confidence": 0.93
+  },
+  {
+    "full_name": "Sam Lee",
+    "primary_email": "sam.lee@example.com",
+    "phone": null,
+    "skills": [
+      "Machine Learning",
+      "Python"
+    ],
+    "country": "IN",
+    "twitter": null,
+    "overall_confidence": 0.6
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "candidates": [
+    {
+      "candidateName": "Jane Doe",
+      "primaryEmail": "JANE.DOE@example.com",
+      "mobile": "+1 415-555-0199",
+      "skillSet": ["JavaScript", "Python", "Frobnicator"],
+      "city": "San Francisco",
+      "state": "CA",
+      "country": "United States",
+      "linkedinUrl": "https://linkedin.com/in/janedoe",
+      "yearsOfExperience": "8",
+      "jobTitle": "Staff Engineer",
+      "employer": "Acme Corp"
+    },
+    {
+      "candidateName": "Sam Lee",
+      "primaryEmail": "sam.lee@example.com",
+      "skillSet": ["python", "ML"],
+      "country": "IN"
+    }
+  ]
+}

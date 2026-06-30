@@ -1,0 +1,8 @@
+Name: Jane Doe
+
+Spoke with Jane today - very strong candidate. Best email is
+jane.doe@example.com. Tried her cell but the note just says
+"call me after 5pm" so no usable number yet, will retry.
+
+Skills: React, Go, Kubernetes
+Roughly 9 years experience overall.

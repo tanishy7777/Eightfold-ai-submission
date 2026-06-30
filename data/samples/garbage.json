@@ -1,0 +1,5 @@
+{
+  "candidates": [
+    { "candidateName": "Broken Record", "primaryEmail": ,,, }
+  // not valid JSON on purpose: trailing comma, missing value, a comment.
+}

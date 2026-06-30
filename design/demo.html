@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Candidate Transformer — Interactive Architecture</title>
+<style>
+  :root {
+    --bg:        #0a0e14;
+    --bg-soft:   #0d1117;
+    --panel:     #11161f;
+    --panel-2:   #161b24;
+    --line:      #1f2630;
+    --line-2:    #2a323d;
+    --txt:       #e6edf3;
+    --txt-dim:   #8b949e;
+    --txt-faint: #5a626c;
+    --blue:   #58a6ff;
+    --purple: #bc8cff;
+    --green:  #3fb950;
+    --amber:  #f0b429;
+    --red:    #ff7b72;
+    --cyan:   #56d4dd;
+    --indigo: #818cf8;
+    --mono: 'SF Mono','Fira Code','JetBrains Mono','Cascadia Code',ui-monospace,monospace;
+    --sans: -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  }
+  *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+  html,body { height:100%; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(88,166,255,0.08), transparent 60%),
+      radial-gradient(1000px 500px at 90% 0%, rgba(188,140,255,0.07), transparent 55%),
+      var(--bg);
+    color:var(--txt);
+    font-family:var(--sans);
+    overflow-x:hidden;
+    min-height:100vh;
+  }
+  ::selection { background:rgba(88,166,255,0.3); }
+
+  /* ─────────── Top bar ─────────── */
+  .topbar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 32px;
+    border-bottom:1px solid var(--line);
+    background:rgba(10,14,20,0.7);
+    backdrop-filter:blur(12px);
+    position:sticky; top:0; z-index:50;
+  }
+  .brand { display:flex; align-items:baseline; gap:12px; }
+  .brand h1 { font-size:17px; font-weight:700; letter-spacing:-0.3px; color:#f0f6fc; }
+  .brand .sub { font-size:11.5px; color:var(--txt-faint); letter-spacing:0.3px; }
+  .controls { display:flex; gap:10px; align-items:center; }
+  .btn {
+    font-family:var(--sans); font-size:12.5px; font-weight:600;
+    color:var(--txt); background:var(--panel-2);
+    border:1px solid var(--line-2); border-radius:8px;
+    padding:8px 14px; cursor:pointer; transition:all .15s ease;
+    display:inline-flex; align-items:center; gap:7px;
+  }
+  .btn:hover { border-color:var(--blue); color:#fff; background:#1b2330; transform:translateY(-1px); }
+  .btn.primary {
+    background:linear-gradient(135deg,#1f6feb,#388bfd);
+    border-color:#388bfd; color:#fff;
+    box-shadow:0 0 0 0 rgba(56,139,253,0.5);
+  }
+  .btn.primary:hover { box-shadow:0 4px 18px rgba(56,139,253,0.45); transform:translateY(-1px); }
+  .btn.live { background:linear-gradient(135deg,#6e40c9,#8957e5); border-color:#8957e5; }
+  .btn.live:hover { box-shadow:0 4px 18px rgba(137,87,229,0.45); }
+  .btn .kbd { font-family:var(--mono); font-size:9.5px; opacity:.65; border:1px solid currentColor; border-radius:4px; padding:0 4px; margin-left:2px; }
+
+  /* ─────────── Hint strip ─────────── */
+  .hint {
+    text-align:center; font-size:11.5px; color:var(--txt-faint);
+    padding:9px; letter-spacing:0.2px;
+    border-bottom:1px solid var(--line);
+    background:rgba(13,17,23,0.5);
+  }
+  .hint b { color:var(--txt-dim); font-weight:600; }
+  .hint .dot { color:var(--line-2); margin:0 10px; }
+
+  /* ─────────── Stage / diagram ─────────── */
+  .stage-wrap { padding:34px 32px 80px; }
+  .diagram {
+    display:grid;
+    grid-template-columns:210px 1fr 250px;
+    gap:0 40px;
+    max-width:1240px; margin:0 auto;
+    align-items:start;
+  }
+  .col-head {
+    font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--txt-faint); margin-bottom:18px; padding-bottom:9px;
+    border-bottom:1px solid var(--line);
+  }
+
+  /* Sources */
+  .src-group { margin-bottom:22px; }
+  .src-tag {
+    font-size:9.5px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase;
+    padding:3px 9px; border-radius:5px; display:inline-block; margin-bottom:10px;
+  }
+  .src-tag.structured { color:var(--blue); background:rgba(88,166,255,0.1); border:1px solid rgba(88,166,255,0.25); }
+  .src-tag.unstructured { color:var(--purple); background:rgba(188,140,255,0.1); border:1px solid rgba(188,140,255,0.25); }
+  .src {
+    display:flex; align-items:center; gap:9px;
+    padding:10px 12px; margin-bottom:7px; border-radius:9px;
+    font-size:12.5px; font-weight:500; cursor:pointer;
+    border:1px solid; position:relative; transition:all .18s ease;
+    user-select:none;
+  }
+  .src .ic { font-size:15px; width:20px; text-align:center; flex-shrink:0; }
+  .src .meta { display:flex; flex-direction:column; line-height:1.25; }
+  .src .meta small { font-size:9.5px; color:var(--txt-faint); font-family:var(--mono); }
+  .src.structured  { background:rgba(88,166,255,0.06);  border-color:rgba(88,166,255,0.22); color:#9ecbff; }
+  .src.unstructured{ background:rgba(188,140,255,0.06); border-color:rgba(188,140,255,0.22); color:#d2a8ff; }
+  .src:hover { transform:translateX(3px); filter:brightness(1.25); }
+  .src.dim { opacity:0.22; filter:grayscale(0.6); }
+  .src.active { box-shadow:0 0 0 1px currentColor, 0 0 22px -4px currentColor; transform:translateX(3px); }
+  .src::after {
+    content:''; position:absolute; right:-22px; top:50%; width:18px; height:1px;
+    background:linear-gradient(90deg,currentColor,transparent); opacity:.3;
+  }
+
+  /* Pipeline */
+  .pipe { display:flex; flex-direction:column; }
+  .stage {
+    border-radius:12px; border:1px solid; padding:14px 16px; cursor:pointer;
+    position:relative; transition:all .2s cubic-bezier(.2,.7,.3,1);
+    background:var(--panel);
+  }
+  .stage:hover { transform:translateY(-2px) scale(1.008); }
+  .stage .st-top { display:flex; align-items:center; justify-content:space-between; }
+  .stage .st-title {
+    font-size:11.5px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase;
+    display:flex; align-items:center; gap:9px;
+  }
+  .stage .st-num {
+    font-family:var(--mono); font-size:10px; width:20px; height:20px; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center;
+    border:1px solid currentColor; opacity:.8;
+  }
+  .stage .st-expand { font-size:11px; color:var(--txt-faint); opacity:0; transition:opacity .15s; }
+  .stage:hover .st-expand { opacity:1; }
+  .stage .st-desc { font-size:11.5px; color:var(--txt-dim); line-height:1.5; margin-top:7px; }
+  .stage .st-desc code { font-family:var(--mono); font-size:10.5px; background:rgba(255,255,255,0.05); padding:1px 4px; border-radius:3px; color:inherit; }
+  .stage .st-badges { display:flex; flex-wrap:wrap; gap:5px; margin-top:9px; }
+  .badge {
+    font-size:9.5px; font-family:var(--mono); padding:2px 8px; border-radius:20px;
+    border:1px solid; font-weight:500;
+  }
+
+  /* per-stage accent */
+  .s-detect    { --c:var(--blue); }
+  .s-normalize { --c:var(--purple); }
+  .s-match     { --c:var(--cyan); }
+  .s-merge     { --c:var(--amber); }
+  .s-conf      { --c:var(--red); }
+  .s-project   { --c:var(--green); }
+  .s-validate  { --c:var(--indigo); }
+  .stage { border-color:color-mix(in srgb, var(--c) 35%, transparent); }
+  .stage .st-title, .stage .st-num { color:var(--c); }
+  .stage .badge { color:var(--c); border-color:color-mix(in srgb,var(--c) 35%,transparent); background:color-mix(in srgb,var(--c) 9%,transparent); }
+  .stage::before {
+    content:''; position:absolute; left:0; top:14px; bottom:14px; width:3px; border-radius:3px;
+    background:var(--c); opacity:.55;
+  }
+  .stage.lit {
+    box-shadow:0 0 0 1px var(--c), 0 0 32px -6px var(--c);
+    transform:translateY(-2px) scale(1.012);
+    background:color-mix(in srgb,var(--c) 8%, var(--panel));
+  }
+  .stage.selected { box-shadow:0 0 0 1.5px var(--c); }
+
+  .connector { display:flex; justify-content:center; align-items:center; height:20px; position:relative; }
+  .connector::before {
+    content:''; position:absolute; left:50%; top:-2px; bottom:-2px; width:2px;
+    background:var(--line-2); transform:translateX(-50%);
+  }
+  .connector .pkt {
+    position:absolute; left:50%; top:50%; width:9px; height:9px; border-radius:50%;
+    transform:translate(-50%,-50%) scale(0); background:#fff;
+    box-shadow:0 0 14px 3px #fff; opacity:0; z-index:3;
+  }
+  .connector .arr {
+    width:8px; height:8px; border-right:2px solid var(--line-2); border-bottom:2px solid var(--line-2);
+    transform:rotate(45deg); background:var(--bg); position:relative; z-index:1;
+  }
+
+  /* Output column */
+  .out-card { border-radius:11px; border:1px solid var(--line); background:var(--panel); overflow:hidden; margin-bottom:16px; }
+  .out-card .oc-head {
+    padding:10px 14px; font-size:10px; font-weight:700; letter-spacing:1.1px; text-transform:uppercase;
+    display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--line);
+  }
+  .oc-head .dot { width:7px; height:7px; border-radius:50%; }
+  .oc-head.green  { color:var(--green); background:rgba(63,185,80,0.1); } .oc-head.green .dot{background:var(--green);}
+  .oc-head.purple { color:var(--purple); background:rgba(188,140,255,0.1); } .oc-head.purple .dot{background:var(--purple);}
+  .oc-head.blue   { color:var(--blue); background:rgba(88,166,255,0.1); } .oc-head.blue .dot{background:var(--blue);}
+  .oc-body { padding:11px 14px; }
+
+  .fld {
+    display:flex; align-items:baseline; justify-content:space-between; gap:8px;
+    padding:4px 0; font-family:var(--mono); font-size:11px;
+    border-bottom:1px solid rgba(255,255,255,0.035);
+    opacity:.35; transition:opacity .4s ease, transform .4s ease; transform:translateX(-4px);
+  }
+  .fld:last-child { border-bottom:none; }
+  .fld.on { opacity:1; transform:translateX(0); }
+  .fld .fn { color:var(--blue); }
+  .fld .fv { color:var(--txt-dim); font-size:10px; text-align:right; }
+  .fld .fv.num { color:var(--green); }
+  .fld .fv.warn { color:var(--amber); }
+
+  .conf-bar { height:5px; border-radius:3px; background:var(--line); overflow:hidden; margin-top:3px; }
+  .conf-bar > i { display:block; height:100%; width:0; border-radius:3px; background:linear-gradient(90deg,var(--amber),var(--green)); transition:width 1s ease; }
+
+  .config-kv { font-family:var(--mono); font-size:10.5px; line-height:1.95; color:var(--txt-dim); }
+  .config-kv .k{color:var(--blue);} .config-kv .v{color:#a5d6ff;} .config-kv .s{color:#ffa657;} .config-kv .b{color:var(--red);}
+
+  .invariant { padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.035); }
+  .invariant:last-child{border-bottom:none;}
+  .invariant b { font-size:11.5px; color:#f0f6fc; display:block; margin-bottom:2px; }
+  .invariant span { font-size:10.5px; color:var(--txt-faint); line-height:1.45; }
+  .invariant code { font-family:var(--mono); font-size:9.5px; color:var(--blue); background:rgba(88,166,255,0.08); padding:1px 4px; border-radius:3px; }
+
+  /* ─────────── Drawer ─────────── */
+  .scrim {
+    position:fixed; inset:0; background:rgba(4,6,10,0.6); backdrop-filter:blur(3px);
+    opacity:0; pointer-events:none; transition:opacity .25s ease; z-index:80;
+  }
+  .scrim.open { opacity:1; pointer-events:auto; }
+  .drawer {
+    position:fixed; top:0; right:0; height:100%; width:min(560px,92vw);
+    background:linear-gradient(180deg,#0e1320,#0b0f17);
+    border-left:1px solid var(--line-2); z-index:90;
+    transform:translateX(102%); transition:transform .32s cubic-bezier(.2,.8,.2,1);
+    display:flex; flex-direction:column;
+    box-shadow:-30px 0 60px -20px rgba(0,0,0,0.7);
+  }
+  .drawer.open { transform:translateX(0); }
+  .dw-head { padding:22px 26px 16px; border-bottom:1px solid var(--line); position:relative; }
+  .dw-head .dw-num { font-family:var(--mono); font-size:11px; color:var(--accent); letter-spacing:1px; }
+  .dw-head h2 { font-size:21px; font-weight:700; margin-top:4px; letter-spacing:-0.3px; color:#f0f6fc; }
+  .dw-head h2 .accent { color:var(--accent); }
+  .dw-head .dw-tag { font-size:11.5px; color:var(--txt-dim); margin-top:6px; line-height:1.5; }
+  .dw-close {
+    position:absolute; top:20px; right:22px; width:30px; height:30px; border-radius:8px;
+    border:1px solid var(--line-2); background:var(--panel-2); color:var(--txt-dim);
+    cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;
+    transition:all .15s;
+  }
+  .dw-close:hover { border-color:var(--red); color:var(--red); }
+  .dw-body { padding:20px 26px 40px; overflow-y:auto; flex:1; }
+  .dw-body::-webkit-scrollbar { width:8px; }
+  .dw-body::-webkit-scrollbar-thumb { background:var(--line-2); border-radius:4px; }
+
+  .dw-sec-label {
+    font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase;
+    color:var(--txt-faint); margin:22px 0 9px;
+  }
+  .dw-sec-label:first-child { margin-top:0; }
+  .dw-body p { font-size:13px; line-height:1.65; color:var(--txt-dim); }
+  .dw-body p code, .dw-body li code { font-family:var(--mono); font-size:11.5px; color:var(--accent); background:color-mix(in srgb,var(--accent) 10%,transparent); padding:1px 5px; border-radius:4px; }
+  .dw-body strong { color:var(--txt); }
+
+  pre.code {
+    background:#070a0f; border:1px solid var(--line); border-radius:10px;
+    padding:14px 16px; overflow-x:auto; font-family:var(--mono); font-size:11.5px;
+    line-height:1.6; color:#c9d1d9; position:relative;
+  }
+  pre.code::-webkit-scrollbar { height:7px; }
+  pre.code::-webkit-scrollbar-thumb { background:var(--line-2); border-radius:4px; }
+  pre.code .file { display:block; font-size:9.5px; color:var(--txt-faint); margin-bottom:8px; letter-spacing:0.5px; }
+  .tok-k { color:#ff7b72; } .tok-s { color:#a5d6ff; } .tok-c { color:#7d8590; font-style:italic; }
+  .tok-f { color:#d2a8ff; } .tok-n { color:#79c0ff; } .tok-d { color:#ffa657; }
+
+  ul.edge { list-style:none; }
+  ul.edge li {
+    font-size:12px; line-height:1.55; color:var(--txt-dim);
+    padding:8px 0 8px 26px; position:relative; border-bottom:1px solid rgba(255,255,255,0.04);
+  }
+  ul.edge li:last-child{border-bottom:none;}
+  ul.edge li::before { content:'▹'; position:absolute; left:6px; top:8px; color:var(--accent); }
+  ul.edge li b { color:var(--txt); }
+
+  /* trust table inside drawer */
+  .ttbl { border-radius:8px; overflow:hidden; border:1px solid var(--line); font-family:var(--mono); font-size:10.5px; }
+  .ttbl .tr { display:grid; grid-template-columns:96px repeat(6,1fr); }
+  .ttbl .tr:first-child .tc { background:rgba(255,255,255,0.04); color:var(--txt-faint); font-weight:700; font-size:9px; text-transform:uppercase; }
+  .ttbl .tc { padding:5px 6px; border-right:1px solid rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.05); text-align:center; }
+  .ttbl .tc:first-child { text-align:left; color:var(--txt-dim); }
+  .hi{color:var(--green);} .mi{color:var(--amber);} .lo{color:var(--txt-faint);}
+
+  .formula {
+    background:#070a0f; border:1px solid var(--line); border-radius:10px; padding:16px;
+    font-family:var(--mono); font-size:13px; color:var(--txt); text-align:center; line-height:2;
+  }
+  .formula .big { font-size:16px; color:var(--accent); }
+  .formula .note { font-size:10.5px; color:var(--txt-faint); }
+
+  /* ─────────── Recording-instructions modal ─────────── */
+  .modal-scrim {
+    position:fixed; inset:0; background:rgba(4,6,10,0.78); backdrop-filter:blur(6px);
+    z-index:100; display:none; align-items:center; justify-content:center; padding:24px;
+  }
+  .modal-scrim.open { display:flex; }
+  .modal {
+    background:linear-gradient(180deg,#0f1420,#0b0f17); border:1px solid var(--line-2);
+    border-radius:16px; max-width:580px; width:100%; padding:28px 30px;
+    box-shadow:0 30px 80px -20px rgba(0,0,0,0.8);
+  }
+  .modal h3 { font-size:18px; font-weight:700; color:#f0f6fc; margin-bottom:6px; display:flex; align-items:center; gap:9px; }
+  .modal .lede { font-size:12.5px; color:var(--txt-dim); line-height:1.6; margin-bottom:18px; }
+  .step { display:flex; gap:12px; padding:11px 0; border-top:1px solid var(--line); }
+  .step .n { font-family:var(--mono); font-size:12px; color:var(--purple); width:22px; height:22px; border-radius:50%; border:1px solid var(--purple); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .step .t { font-size:12.5px; color:var(--txt-dim); line-height:1.55; }
+  .step .t b { color:var(--txt); }
+  .step .t code { font-family:var(--mono); font-size:11px; color:var(--green); background:rgba(63,185,80,0.1); padding:1px 5px; border-radius:4px; }
+  .modal .warn-box {
+    margin-top:16px; padding:11px 13px; border-radius:9px; font-size:11.5px; line-height:1.55;
+    background:rgba(240,180,41,0.08); border:1px solid rgba(240,180,41,0.25); color:#f0c674;
+  }
+  .modal-actions { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
+
+  .ghost-note {
+    font-size:10.5px; color:var(--txt-faint); margin-top:14px; padding:10px 12px;
+    border:1px dashed var(--line-2); border-radius:8px; line-height:1.5;
+  }
+
+  @media (max-width:980px){
+    .diagram{grid-template-columns:1fr; gap:30px;}
+    .src::after{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ─────────── TOP BAR ─────────── -->
+<div class="topbar">
+  <div class="brand">
+    <h1>Multi-Source Candidate Transformer</h1>
+    <span class="sub">interactive architecture</span>
+  </div>
+  <div class="controls">
+    <button class="btn primary" id="runBtn">▶ Run Jane <span class="kbd">R</span></button>
+    <button class="btn live" id="presBtn">🎬 Presenter Mode <span class="kbd">P</span></button>
+    <button class="btn" id="resetBtn">↺ Reset</button>
+  </div>
+</div>
+
+<div class="hint">
+  <b>Click any stage</b> to open its internals &nbsp;<span class="dot">·</span>&nbsp;
+  <b>Click a source</b> to trace its path &nbsp;<span class="dot">·</span>&nbsp;
+  <b>← →</b> step stages &nbsp;<span class="dot">·</span>&nbsp;
+  <b>Esc</b> close &nbsp;<span class="dot">·</span>&nbsp;
+  <b>Presenter Mode</b> = teleprompter the camera can't see
+</div>
+
+<!-- ─────────── DIAGRAM ─────────── -->
+<div class="stage-wrap">
+  <div class="diagram">
+
+    <!-- Sources -->
+    <div class="sources-col">
+      <div class="col-head">Sources</div>
+      <div class="src-group">
+        <span class="src-tag structured">Structured</span>
+        <div class="src structured" data-src="recruiter_csv"><span class="ic">📊</span><span class="meta">Recruiter CSV<small>recruiter.csv</small></span></div>
+        <div class="src structured" data-src="ats_json"><span class="ic">🗄</span><span class="meta">ATS JSON<small>ats.json</small></span></div>
+      </div>
+      <div class="src-group">
+        <span class="src-tag unstructured">Unstructured</span>
+        <div class="src unstructured" data-src="github"><span class="ic">🐙</span><span class="meta">GitHub<small>github.com/…</small></span></div>
+        <div class="src unstructured" data-src="linkedin"><span class="ic">💼</span><span class="meta">LinkedIn<small>linkedin.com/in/…</small></span></div>
+        <div class="src unstructured" data-src="resume"><span class="ic">📄</span><span class="meta">Resume<small>resume.md / .pdf</small></span></div>
+        <div class="src unstructured" data-src="recruiter_notes"><span class="ic">📝</span><span class="meta">Recruiter Notes<small>notes.txt</small></span></div>
+      </div>
+      <div class="ghost-note">
+        🐙💼 GitHub &amp; LinkedIn accept a <b>live URL</b> or a cached JSON fixture — same adapter, auto-detected.
+      </div>
+    </div>
+
+    <!-- Pipeline -->
+    <div class="pipeline-col">
+      <div class="col-head">Pipeline &nbsp;·&nbsp; detect → … → validate</div>
+      <div class="pipe" id="pipe"></div>
+    </div>
+
+    <!-- Output -->
+    <div class="output-col">
+      <div class="col-head">Output</div>
+
+      <div class="out-card">
+        <div class="oc-head green"><span class="dot"></span> Canonical Profile — Jane</div>
+        <div class="oc-body" id="profileFields"></div>
+      </div>
+
+      <div class="out-card">
+        <div class="oc-head purple"><span class="dot"></span> Runtime Config</div>
+        <div class="oc-body">
+          <div class="config-kv">
+            <span class="k">path</span> <span class="v">full_name</span> · <span class="b">required</span><br>
+            <span class="k">from</span> <span class="v">emails[0]</span> → primary_email<br>
+            <span class="k">from</span> <span class="v">skills[].name</span><br>
+            <span class="k">normalize</span> <span class="s">E164</span> · <span class="s">iso2</span><br>
+            <span class="k">on_missing</span> <span class="s">omit</span> | null | error<br>
+            <span class="k">include_provenance</span> <span class="b">true</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="out-card">
+        <div class="oc-head blue"><span class="dot"></span> Design Invariants</div>
+        <div class="oc-body">
+          <div class="invariant"><b>Deterministic</b><span>Fixed trust tables · stable sorts · content-hash id · no RNG/clock → byte-stable output</span></div>
+          <div class="invariant"><b>Robust</b><span>Bad source → <code>[]</code> + warning · run always completes</span></div>
+          <div class="invariant"><b>Explainable</b><span>Every value traced to source + method · unknowns → <code>null</code>, never invented</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─────────── DRAWER ─────────── -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer">
+  <div class="dw-head">
+    <button class="dw-close" id="dwClose">✕</button>
+    <div class="dw-num" id="dwNum"></div>
+    <h2 id="dwTitle"></h2>
+    <div class="dw-tag" id="dwTag"></div>
+  </div>
+  <div class="dw-body" id="dwBody"></div>
+</aside>
+
+<!-- ─────────── RECORDING MODAL ─────────── -->
+<div class="modal-scrim" id="modalScrim">
+  <div class="modal">
+    <h3>🎬 Presenter Mode — invisible teleprompter</h3>
+    <p class="lede">
+      A separate floating window holds your demo script and auto-scrolls. The trick to keeping it
+      <b>out of the recording</b>: record only the diagram, not the whole screen.
+    </p>
+    <div class="step"><div class="n">1</div><div class="t"><b>Open the teleprompter</b> — a small always-on-top window appears (Picture-in-Picture). Drag it anywhere off to the side.</div></div>
+    <div class="step"><div class="n">2</div><div class="t"><b>Record a region, not the screen.</b> macOS: <code>⌘⇧5</code> → "Record Selected Portion" → draw the box around <b>only</b> this diagram. The teleprompter sits outside the box → never captured.</div></div>
+    <div class="step"><div class="n">3</div><div class="t"><b>Or capture a single window</b> in OBS/QuickTime (Window Capture → this browser window). The PiP teleprompter is a different window, so it stays invisible.</div></div>
+    <div class="warn-box">
+      ⚠️ Honest note: no webpage can hide a div from a full-screen recorder (that's OS-level DRM, like Netflix). This works by putting the script in a <b>separate window you don't record</b> — the reliable way pros run hidden teleprompters.
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="modalCancel">Cancel</button>
+      <button class="btn live" id="modalGo">Open teleprompter →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   STAGE DATA  — authentic snippets pulled from the real source tree
+   ════════════════════════════════════════════════════════════════════ */
+const STAGES = [
+  {
+    id:'detect', cls:'s-detect', num:'01', icon:'🔀',
+    title:'Detect & Extract', accent:'#58a6ff',
+    tag:'Route each input to its adapter; parse raw → canonical SourceRecords.',
+    short:'Route each input to its adapter. Parses raw source into <code>SourceRecord</code>s — partial profiles in canonical field names with per-claim <code>{source, method, raw}</code> provenance. A bad source returns <code>[]</code> + a warning; the run never crashes.',
+    badges:['one adapter / source','Adapter protocol','robust'],
+    body:`
+      <div class="dw-sec-label">What happens</div>
+      <p>Each source file is handed to <strong>one adapter</strong>. The adapter knows that source's quirks: the ATS adapter remaps its own field names to ours; the GitHub/LinkedIn adapters auto-detect a <strong>live URL vs a cached JSON fixture</strong>. Every parsed value becomes a <em>claim</em> carrying its own provenance — <code>{field, source, method, raw}</code>.</p>
+      <div class="dw-sec-label">Robustness contract</div>
+      <p>A malformed source (broken JSON, missing file, empty CSV) returns an empty list plus a logged warning. The pipeline keeps going — <strong>a garbage source never crashes the run.</strong></p>
+      <div class="dw-sec-label">github.py — URL vs fixture auto-detect</div>
+      <pre class="code"><span class="file">src/transformer/sources/github.py</span><span class="tok-k">def</span> <span class="tok-f">_resolve</span>(path):
+    <span class="tok-c"># live fetch for a URL or bare username; else read fixture</span>
+    <span class="tok-k">if</span> path.startswith(<span class="tok-s">"https://github.com/"</span>):
+        user = path.rstrip(<span class="tok-s">"/"</span>).split(<span class="tok-s">"/"</span>)[-<span class="tok-n">1</span>]
+        <span class="tok-k">return</span> _fetch_live(user)
+    p = Path(path)
+    <span class="tok-k">if</span> <span class="tok-k">not</span> p.exists() <span class="tok-k">and</span> <span class="tok-s">"/"</span> <span class="tok-k">not in</span> path <span class="tok-k">and</span> <span class="tok-s">"."</span> <span class="tok-k">not in</span> path:
+        <span class="tok-k">return</span> _fetch_live(path)   <span class="tok-c"># bare username</span>
+    <span class="tok-k">return</span> safe_read_json(path)</pre>
+      <div class="dw-sec-label">Edge cases</div>
+      <ul class="edge">
+        <li><b>Garbage source</b> — <code>garbage.json</code> is intentionally broken JSON → skipped with a warning, run completes.</li>
+        <li><b>Adding a source</b> = one new file implementing the tiny <code>Adapter</code> protocol. No engine change.</li>
+        <li><b>Method tagging</b> — each claim records <em>how</em> it was obtained (direct / regex / inferred); this feeds confidence later.</li>
+      </ul>`
+  },
+  {
+    id:'normalize', cls:'s-normalize', num:'02', icon:'⚙️',
+    title:'Normalize', accent:'#bc8cff',
+    tag:'Pure deterministic functions: raw → canonical format, or None.',
+    short:'Pure, deterministic functions per field type. Un-normalizable input returns <code>None</code> — never guessed, never invented.',
+    badges:['phones → E.164','dates → YYYY-MM','country → ISO-2','skills → canonical'],
+    body:`
+      <div class="dw-sec-label">What happens</div>
+      <p>Each canonical field has a pure normalizer. Phones → <strong>E.164</strong>, dates → <strong>YYYY-MM</strong>, country → <strong>ISO-3166 alpha-2</strong>, skills → canonical names via an alias map. Pure = same input always yields same output, and <strong>nothing raises</strong>.</p>
+      <div class="dw-sec-label">The honesty rule</div>
+      <p>If a value can't be normalized — <code>"call me after 5pm"</code>, <code>"Summer 2018"</code> — the function returns <code>None</code>. The raw string is preserved in provenance; <strong>a value is never fabricated to fill a gap.</strong></p>
+      <div class="dw-sec-label">Edge cases</div>
+      <ul class="edge">
+        <li><b>Un-normalizable phone</b> — <code>"call me after 5pm"</code> → no phone produced.</li>
+        <li><b>Fuzzy date</b> — <code>"Summer 2018"</code> → <code>null</code> start date, kept in provenance.</li>
+        <li><b>Unknown skill</b> — <code>Frobnicator</code> (ATS), <code>Leadership</code> (LinkedIn) → kept as-is but confidence-discounted, not dropped, not "corrected".</li>
+        <li><b>Default phone region US</b> — configurable; a <code>+</code>-prefixed number ignores it.</li>
+      </ul>`
+  },
+  {
+    id:'match', cls:'s-match', num:'03', icon:'🔗',
+    title:'Match', accent:'#56d4dd',
+    tag:'Union-find on email/phone — cluster records into one person.',
+    short:'Cluster records that refer to the same person via connected components (union-find). Keys: normalized <strong>email</strong> (primary) then <strong>E.164 phone</strong> (fallback). No fuzzy name matching — a wrong merge is the worst outcome.',
+    badges:['union-find','transitive','order-independent'],
+    body:`
+      <div class="dw-sec-label">What happens</div>
+      <p>Records sharing <strong>any</strong> identifying key (email or E.164 phone) are unioned via connected components. Matching is therefore <strong>transitive</strong> (A~B via email, B~C via phone ⇒ A,B,C are one person) and <strong>independent of input order</strong>. A record with no email/phone shares no key, so it stands alone.</p>
+      <div class="dw-sec-label">Why no fuzzy name matching</div>
+      <p>Two different people can share a name. Merging on name fabricates a person — the "wrong-but-confident" profile the brief calls the worst outcome. So we match only on exact identifying keys and accept we'll sometimes <em>miss</em> a merge rather than ever <em>invent</em> one.</p>
+      <div class="dw-sec-label">matching.py — union-find core</div>
+      <pre class="code"><span class="file">src/transformer/matching.py</span><span class="tok-k">def</span> <span class="tok-f">union</span>(a, b):
+    ra, rb = find(a), find(b)
+    <span class="tok-k">if</span> ra != rb:
+        parent[max(ra, rb)] = min(ra, rb)  <span class="tok-c"># min-root → deterministic</span>
+
+<span class="tok-c"># first record to expose a key owns it; later sharers union in</span>
+<span class="tok-k">for</span> i, rec <span class="tok-k">in</span> enumerate(records):
+    <span class="tok-k">for</span> key <span class="tok-k">in</span> _keys(rec):          <span class="tok-c"># ("email",x) / ("phone",y)</span>
+        <span class="tok-k">if</span> key <span class="tok-k">in</span> key_owner: union(i, key_owner[key])
+        <span class="tok-k">else</span>: key_owner[key] = i</pre>
+      <div class="dw-sec-label">Edge cases</div>
+      <ul class="edge">
+        <li><b>Duplicate person</b> — Jane appears in all 6 sources, merged into one via email.</li>
+        <li><b>Keyless record</b> — no email/phone → stands alone, still gets a stable id.</li>
+        <li><b>Known limitation</b> — a shared generic desk phone could over-merge; documented, accepted over fuzzy logic we couldn't prove safe.</li>
+      </ul>`
+  },
+  {
+    id:'merge', cls:'s-merge', num:'04', icon:'⚖️',
+    title:'Merge', accent:'#f0b429',
+    tag:'Per field: trust-ranked winner (scalar) or deduped union (list).',
+    short:'Per field: scalar → trust-ranked winner. Lists → deduped union. All competing claims kept in provenance. The trust table encodes field-source affinity.',
+    badges:['trust table','scalar winner','list union','full provenance'],
+    body:`
+      <div class="dw-sec-label">Two field shapes, two strategies</div>
+      <p><strong>Scalar</strong> fields (name, headline, years, location, named links) pick <strong>one winner</strong> = highest claim confidence, ties broken deterministically (fixed source order → value sort). <strong>List</strong> fields (emails, phones, skills…) are a <strong>deduped union</strong> — two phones aren't a conflict, they're two phones. Every competing claim, winners and losers, lands in provenance.</p>
+      <div class="dw-sec-label">The trust table — one place to tune & defend</div>
+      <div class="ttbl">
+        <div class="tr"><div class="tc">field</div><div class="tc">CSV</div><div class="tc">ATS</div><div class="tc">LI</div><div class="tc">Resume</div><div class="tc">GH</div><div class="tc">Notes</div></div>
+        <div class="tr"><div class="tc">contact</div><div class="tc hi">.95</div><div class="tc hi">.90</div><div class="tc mi">.60</div><div class="tc mi">.70</div><div class="tc lo">.30</div><div class="tc lo">.50</div></div>
+        <div class="tr"><div class="tc">experience</div><div class="tc lo">.40</div><div class="tc mi">.70</div><div class="tc hi">.90</div><div class="tc hi">.85</div><div class="tc lo">.30</div><div class="tc lo">.40</div></div>
+        <div class="tr"><div class="tc">skills</div><div class="tc lo">.40</div><div class="tc mi">.60</div><div class="tc mi">.70</div><div class="tc hi">.85</div><div class="tc hi">.90</div><div class="tc lo">.40</div></div>
+        <div class="tr"><div class="tc">links</div><div class="tc lo">.50</div><div class="tc mi">.60</div><div class="tc mi">.80</div><div class="tc mi">.60</div><div class="tc hi">.95</div><div class="tc lo">.40</div></div>
+      </div>
+      <div class="dw-sec-label">merge.py — scalar winner</div>
+      <pre class="code"><span class="file">src/transformer/merge.py</span>ranked = sorted(claims, key=<span class="tok-k">lambda</span> c: (
+    -conf.claim_confidence(c),   <span class="tok-c"># 1. highest confidence</span>
+    source_rank(c.source),       <span class="tok-c"># 2. fixed source order</span>
+    str(c.value)))               <span class="tok-c"># 3. value sort (total order)</span>
+winner = ranked[<span class="tok-n">0</span>]</pre>
+      <div class="dw-sec-label">Edge cases</div>
+      <ul class="edge">
+        <li><b>Two phones</b> — Jane's <code>…0142</code> (CSV) &amp; <code>…0199</code> (ATS) both kept; <code>phones[0]</code> is the higher-trust CSV one.</li>
+        <li><b>Location pick</b> — ranked by <b>completeness first</b>: "San Francisco, CA, US" (full) beats "SF Bay Area" even from a more-trusted source → we keep the country.</li>
+        <li><b>years_experience</b> — 8 (ATS) beats notes' 9, with a confidence penalty for the conflict.</li>
+      </ul>`
+  },
+  {
+    id:'conf', cls:'s-conf', num:'05', icon:'📊',
+    title:'Confidence', accent:'#ff7b72',
+    tag:'trust × method, reinforced by noisy-OR, penalized by conflict.',
+    short:'Score each claim <code>cᵢ = trust × method_factor</code>. Agreement → noisy-OR. Conflict → penalty. <code>overall_confidence</code> = mean over core fields.',
+    badges:['noisy-OR','conflict penalty','[0,1] clamped'],
+    body:`
+      <div class="dw-sec-label">The model in three rules</div>
+      <p><strong>1.</strong> A single claim: <code>cᵢ = trust(source,field) × method_factor</code> — direct 1.0 · regex 0.8 · inferred 0.6.<br>
+      <strong>2.</strong> Sources that <strong>agree</strong> reinforce via noisy-OR — two so-so sources beat either alone, but never reach 1.<br>
+      <strong>3.</strong> Sources that <strong>conflict</strong> drop the score by <code>(1 − 0.5·disagree_fraction)</code>.</p>
+      <div class="formula" style="--accent:#ff7b72">
+        <span class="big">c = 1 − Π(1 − cᵢ)</span><br>
+        <span class="note">noisy-OR — "probability at least one source is right"</span><br><br>
+        <span style="color:#ff7b72">c ×= (1 − 0.5 · disagree_fraction)</span><br>
+        <span class="note">conflict penalty — up to halving at total disagreement</span>
+      </div>
+      <div class="dw-sec-label">confidence.py — noisy-OR</div>
+      <pre class="code"><span class="file">src/transformer/confidence.py</span><span class="tok-k">def</span> <span class="tok-f">noisy_or</span>(confidences):
+    product = <span class="tok-n">1.0</span>
+    <span class="tok-k">for</span> c <span class="tok-k">in</span> confidences:
+        product *= (<span class="tok-n">1.0</span> - c)
+    <span class="tok-k">return</span> <span class="tok-n">1.0</span> - product</pre>
+      <div class="dw-sec-label">Worked example — Jane's "Python"</div>
+      <p>Named by ATS, GitHub, LinkedIn, resume. Four agreeing claims combine via noisy-OR → <code>confidence 0.98</code>. A lone unknown skill like <code>Frobnicator</code> (ATS only) → <code>0.42</code> after the unknown-skill penalty. <strong>overall_confidence: 0.94</strong> for Jane, <strong>0.60</strong> for sparse Sam.</p>
+      <div class="dw-sec-label">Edge cases</div>
+      <ul class="edge">
+        <li><b>Missing core field</b> contributes 0 to the mean — honest about gaps, doesn't pretend.</li>
+        <li><b>Everything clamps</b> to [0,1], rounded 2 dp → stable, readable scores.</li>
+      </ul>`
+  },
+  {
+    id:'project', cls:'s-project', num:'06', icon:'🎛️',
+    title:'Project', accent:'#3fb950',
+    tag:'Read-only reshape: config drives output, engine unchanged.',
+    short:'Read-only pass over the canonical record. Runtime config shapes the output — rename, slice arrays, re-apply normalizers, set <code>on_missing</code>. Same engine, any schema.',
+    badges:['path DSL','skills[].name','emails[0]','on_missing'],
+    body:`
+      <div class="dw-sec-label">The core architectural rule</div>
+      <p>The canonical record is built <strong>once</strong> and never mutated. Projection is a <strong>separate read-only layer</strong> that reshapes it per a runtime config — so the same engine serves any output schema with <strong>zero code changes</strong>.</p>
+      <div class="dw-sec-label">The path DSL</div>
+      <p>Small, predictable: dotted paths, <code>[i]</code> index, <code>[]</code> map-over-array. So <code>emails[0]</code> takes the top-trust email; <code>skills[].name</code> plucks every skill name. A per-field <code>normalize</code> re-applies a normalizer at projection time; <code>on_missing</code> is <code>null | omit | error</code>, global with per-field override.</p>
+      <pre class="code"><span class="file">data/configs/custom_compact.json</span>{ <span class="tok-n">"path"</span>: <span class="tok-s">"primary_email"</span>, <span class="tok-n">"from"</span>: <span class="tok-s">"emails[0]"</span>, <span class="tok-n">"type"</span>: <span class="tok-s">"string"</span> },
+{ <span class="tok-n">"path"</span>: <span class="tok-s">"phone"</span>, <span class="tok-n">"from"</span>: <span class="tok-s">"phones[0]"</span>, <span class="tok-n">"normalize"</span>: <span class="tok-s">"E164"</span> },
+{ <span class="tok-n">"path"</span>: <span class="tok-s">"skills"</span>, <span class="tok-n">"from"</span>: <span class="tok-s">"skills[].name"</span> },
+{ <span class="tok-n">"path"</span>: <span class="tok-s">"github"</span>, <span class="tok-n">"from"</span>: <span class="tok-s">"links.github"</span>, <span class="tok-n">"on_missing"</span>: <span class="tok-s">"omit"</span> }</pre>
+      <div class="dw-sec-label">Edge cases</div>
+      <ul class="edge">
+        <li><b>Absent field</b> — Sam has no github link → key <b>omitted</b> under <code>on_missing: omit</code>; <code>twitter</code> → <code>null</code>.</li>
+        <li><b>No <code>fields</code></b> in config ⇒ the full canonical profile is emitted.</li>
+        <li><b>Re-normalize at projection</b> — output formats are enforced again here, independent of source.</li>
+      </ul>`
+  },
+  {
+    id:'validate', cls:'s-validate', num:'07', icon:'✅',
+    title:'Validate', accent:'#818cf8',
+    tag:'Check projected output against the config schema before returning.',
+    short:"Check projected output against the config's declared <code>type</code> and <code>required</code> flags before returning. Errors surface early — never silently emit a malformed profile.",
+    badges:['type checking','required fields','fail-fast'],
+    body:`
+      <div class="dw-sec-label">What happens</div>
+      <p>Every projected output is checked against the config's declared contract: each field's <code>type</code> (<code>string</code>, <code>string[]</code>, <code>number</code>, object shapes) and its <code>required</code> flag. A shape that breaks the contract <strong>raises immediately</strong> — the system never silently emits a malformed profile.</p>
+      <div class="dw-sec-label">Why a separate stage</div>
+      <p>Projection is flexible by design; validation is the guardrail that keeps that flexibility honest. The config declares the contract <em>and</em> is checked against it, so a bad config fails fast and loud instead of producing quiet garbage downstream.</p>
+      <div class="dw-sec-label">Edge cases</div>
+      <ul class="edge">
+        <li><b>Required field missing</b> → validation error, non-zero exit, clear message.</li>
+        <li><b>Type mismatch</b> → caught before return, never reaches the consumer.</li>
+        <li><b>Determinism check</b> — a gold-profile test runs the pipeline twice and asserts byte-equality.</li>
+      </ul>`
+  },
+];
+
+/* Which canonical output fields each stage "produces / finalizes" — for the run animation */
+const STAGE_FIELDS = {
+  detect:    [],
+  normalize: [],
+  match:     ['candidate_id'],
+  merge:     ['full_name','emails','phones','location','links','headline','years_experience','experience','education'],
+  conf:      ['skills','overall_confidence'],
+  project:   ['provenance'],
+  validate:  [],
+};
+
+/* Real values from outputs/default_output.json (Jane) */
+const PROFILE = [
+  {k:'candidate_id', v:'cand_d9fce…'},
+  {k:'full_name', v:'Jane Doe'},
+  {k:'emails', v:'1 value'},
+  {k:'phones', v:'2 values', cls:'warn'},
+  {k:'location', v:'SF · CA · US'},
+  {k:'links', v:'gh · li · web'},
+  {k:'headline', v:'Senior SWE @ Acme'},
+  {k:'years_experience', v:'8.0', cls:'num'},
+  {k:'skills', v:'10 scored'},
+  {k:'experience', v:'4 roles'},
+  {k:'education', v:'MIT B.S.'},
+  {k:'provenance', v:'37 entries'},
+  {k:'overall_confidence', v:'0.94', cls:'num', conf:0.94},
+];
+
+/* Which sources feed which stages — for the click-to-trace highlight */
+const SRC_PATH = {
+  recruiter_csv:   ['detect','normalize','match','merge','conf','project','validate'],
+  ats_json:        ['detect','normalize','match','merge','conf','project','validate'],
+  github:          ['detect','normalize','match','merge','conf','project','validate'],
+  linkedin:        ['detect','normalize','match','merge','conf','project','validate'],
+  resume:          ['detect','normalize','match','merge','conf','project','validate'],
+  recruiter_notes: ['detect','normalize','match','merge','conf','project','validate'],
+};
+const SRC_LABEL = {
+  recruiter_csv:'Recruiter CSV', ats_json:'ATS JSON', github:'GitHub',
+  linkedin:'LinkedIn', resume:'Resume', recruiter_notes:'Recruiter Notes'
+};
+
+/* Raw sample files + what each adapter extracts for Jane (real values). */
+const SOURCES = {
+  recruiter_csv:{
+    icon:'📊', label:'Recruiter CSV', kind:'STRUCTURED', accent:'#58a6ff',
+    file:'data/samples/recruiter.csv',
+    raw:`Name,Email,Phone,Current Company,Title
+Jane Doe,jane.doe@example.com,(415) 555-0142,Acme Corp,Senior Software Engineer
+Sam Lee,sam.lee@example.com,,Globex,Data Scientist`,
+    extracts:[
+      {field:'full_name', val:'Jane Doe', method:'direct_field'},
+      {field:'emails', val:'jane.doe@example.com', method:'direct_field'},
+      {field:'phones', val:'(415) 555-0142 → +14155550142', method:'direct_field'},
+      {field:'experience', val:'Senior Software Engineer · Acme Corp', method:'direct_field'},
+    ],
+    gotchas:[
+      '<b>Phone "(415) 555-0142"</b> → E.164 <code>+14155550142</code> (default region US).',
+      '<b>Header columns</b> mapped to canonical fields — "Current Company" + "Title" → an experience row.',
+      "<b>Sam's empty Phone cell</b> → no phone claim at all (not an empty string)."
+    ]
+  },
+  ats_json:{
+    icon:'🗄', label:'ATS JSON', kind:'STRUCTURED', accent:'#58a6ff',
+    file:'data/samples/ats.json',
+    raw:`{
+  "candidates": [
+    {
+      "candidateName": "Jane Doe",
+      "primaryEmail": "JANE.DOE@example.com",
+      "mobile": "+1 415-555-0199",
+      "skillSet": ["JavaScript", "Python", "Frobnicator"],
+      "city": "San Francisco",
+      "state": "CA",
+      "country": "United States",
+      "linkedinUrl": "https://linkedin.com/in/janedoe",
+      "yearsOfExperience": "8",
+      "jobTitle": "Staff Engineer",
+      "employer": "Acme Corp"
+    },
+    { "candidateName": "Sam Lee", "primaryEmail": "sam.lee@example.com",
+      "skillSet": ["python", "ML"], "country": "IN" }
+  ]
+}`,
+    extracts:[
+      {field:'full_name', val:'Jane Doe', method:'direct_field'},
+      {field:'emails', val:'JANE.DOE@… → jane.doe@example.com', method:'direct_field'},
+      {field:'phones', val:'+1 415-555-0199 → +14155550199', method:'direct_field'},
+      {field:'skills', val:'JavaScript · Python · Frobnicator', method:'direct_field'},
+      {field:'location', val:'San Francisco, CA, United States → US', method:'direct_field'},
+      {field:'links.linkedin', val:'linkedin.com/in/janedoe', method:'direct_field'},
+      {field:'years_experience', val:'"8" → 8.0', method:'direct_field'},
+      {field:'experience', val:'Staff Engineer · Acme Corp', method:'direct_field'},
+    ],
+    gotchas:[
+      '<b>Remaps its OWN field names</b> (candidateName, primaryEmail, mobile, skillSet…) to canonical via a mapping table.',
+      '<b>Upper-cased email</b> "JANE.DOE@…" → lower-cased so it matches every other source.',
+      '<b>"United States"</b> → ISO-3166 alpha-2 <code>US</code>.',
+      '<b>"Frobnicator"</b> unknown skill → kept, confidence-discounted, never dropped or "corrected".'
+    ]
+  },
+  github:{
+    icon:'🐙', label:'GitHub', kind:'UNSTRUCTURED', accent:'#bc8cff',
+    file:'github.com/janedoe (live) or cached fixture',
+    raw:`{
+  "login": "janedoe",
+  "name": "Jane Doe",
+  "email": "jane.doe@example.com",
+  "bio": "Backend engineer who loves distributed systems",
+  "html_url": "https://github.com/janedoe",
+  "blog": "https://janedoe.dev",
+  "location": "San Francisco, CA, USA",
+  "languages": ["Python", "Go", "TypeScript"]
+}`,
+    extracts:[
+      {field:'full_name', val:'Jane Doe', method:'direct_field'},
+      {field:'emails', val:'jane.doe@example.com', method:'direct_field'},
+      {field:'headline', val:'Backend engineer who loves distributed systems', method:'direct_field'},
+      {field:'links.github', val:'github.com/janedoe', method:'direct_field'},
+      {field:'links.portfolio', val:'janedoe.dev', method:'direct_field'},
+      {field:'location', val:'San Francisco, CA, USA → US', method:'inferred'},
+      {field:'skills', val:'Python · Go · TypeScript', method:'inferred'},
+    ],
+    gotchas:[
+      '<b>URL or fixture auto-detected</b> — same adapter handles <code>github.com/janedoe</code> and a cached JSON file.',
+      '<b>languages → skills</b> tagged <code>inferred</code> — a repo language is a proxy, not a stated skill → lowest method factor (0.6).',
+      '<b>Public email</b> is what lets this profile MATCH Jane; without it, it would stand alone.'
+    ]
+  },
+  linkedin:{
+    icon:'💼', label:'LinkedIn', kind:'UNSTRUCTURED', accent:'#bc8cff',
+    file:'linkedin.com/in/janedoe (live) or cached export',
+    raw:`{
+  "profileUrl": "https://linkedin.com/in/janedoe",
+  "fullName": "Jane Doe",
+  "email": "jane.doe@example.com",
+  "headline": "Senior Software Engineer at Acme Corp",
+  "location": "San Francisco Bay Area",
+  "skills": ["Python", "Kubernetes", "Leadership"],
+  "experience": [
+    { "title": "Senior Software Engineer", "company": "Acme Corp",
+      "start": "Jan 2021", "end": "Present" },
+    { "title": "Software Engineering Intern", "company": "Initech",
+      "start": "Jun 2017", "end": "Aug 2017" }
+  ],
+  "education": [
+    { "school": "MIT", "degree": "B.S.", "field": "Computer Science", "end": "2018" }
+  ]
+}`,
+    extracts:[
+      {field:'full_name', val:'Jane Doe', method:'direct_field'},
+      {field:'emails', val:'jane.doe@example.com', method:'direct_field'},
+      {field:'headline', val:'Senior Software Engineer at Acme Corp', method:'direct_field'},
+      {field:'links.linkedin', val:'linkedin.com/in/janedoe', method:'direct_field'},
+      {field:'location', val:'San Francisco Bay Area', method:'direct_field'},
+      {field:'skills', val:'Python · Kubernetes · Leadership', method:'direct_field'},
+      {field:'experience', val:'Senior SWE · Acme · Jan 2021→2021-01 · Present→null', method:'direct_field'},
+      {field:'education', val:'MIT · B.S. Computer Science · 2018', method:'direct_field'},
+    ],
+    gotchas:[
+      '<b>Dates normalized</b> — "Jan 2021" → <code>2021-01</code>; "Present" → <code>null</code> end.',
+      `<b>"San Francisco Bay Area"</b> is less complete than ATS's full address → loses the location pick (completeness-first) but stays in provenance.`,
+      `<b>"Leadership"</b> isn't a recognized tech skill → kept, discounted.`
+    ]
+  },
+  resume:{
+    icon:'📄', label:'Resume', kind:'UNSTRUCTURED', accent:'#bc8cff',
+    file:'data/samples/resume_jane.md',
+    raw:`Jane Doe
+Senior Software Engineer
+
+jane.doe@example.com | +1 (415) 555-0142
+San Francisco, CA
+
+SKILLS
+Python, JavaScript, React, PostgreSQL, Docker
+
+EXPERIENCE
+Senior Software Engineer, Acme Corp (Jan 2021 - Present)
+Software Engineer, Globex (Summer 2018 - Dec 2020)
+
+EDUCATION
+B.S. Computer Science, MIT, 2018`,
+    extracts:[
+      {field:'full_name', val:'Jane Doe (top line)', method:'inferred'},
+      {field:'emails', val:'jane.doe@example.com', method:'regex_extract'},
+      {field:'phones', val:'+1 (415) 555-0142 → +14155550142', method:'regex_extract'},
+      {field:'skills', val:'Python · JavaScript · React · PostgreSQL · Docker', method:'regex_extract'},
+      {field:'experience', val:'Acme (2021-01→present) · Globex (Summer 2018→2020-12)', method:'regex_extract'},
+      {field:'education', val:'B.S. Computer Science · MIT · 2018', method:'regex_extract'},
+    ],
+    gotchas:[
+      '<b>Section headings</b> SKILLS / EXPERIENCE / EDUCATION on their own line drive parsing.',
+      '<b>"Summer 2018"</b> → <code>null</code> start date (un-normalizable), raw kept in provenance, never guessed.',
+      '<b>full_name from the top line</b> → tagged <code>inferred</code> (positional guess) → low method factor.'
+    ]
+  },
+  recruiter_notes:{
+    icon:'📝', label:'Recruiter Notes', kind:'UNSTRUCTURED', accent:'#bc8cff',
+    file:'data/samples/notes.txt',
+    raw:`Name: Jane Doe
+
+Spoke with Jane today - very strong candidate. Best email is
+jane.doe@example.com. Tried her cell but the note just says
+"call me after 5pm" so no usable number yet, will retry.
+
+Skills: React, Go, Kubernetes
+Roughly 9 years experience overall.`,
+    extracts:[
+      {field:'full_name', val:'Jane Doe', method:'regex_extract'},
+      {field:'emails', val:'jane.doe@example.com', method:'regex_extract'},
+      {field:'skills', val:'React · Go · Kubernetes', method:'regex_extract'},
+      {field:'years_experience', val:'"9 years" → 9.0', method:'regex_extract'},
+    ],
+    gotchas:[
+      '<b>"call me after 5pm"</b> → NO phone produced (un-normalizable, never invented).',
+      `<b>years "9"</b> loses to ATS's "8" at merge, with a conflict penalty applied.`,
+      '<b>Free prose</b> → regex extraction → method factor 0.8 (below a structured direct field).'
+    ]
+  },
+};
+
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function methodPill(m){
+  const map={direct_field:['direct','#3fb950'], regex_extract:['regex','#f0b429'], inferred:['inferred','#bc8cff']};
+  const [t,c]=map[m]||['?', '#8b949e'];
+  return `<span style="color:${c};border:1px solid ${c};border-radius:20px;padding:1px 8px;font-size:9px;white-space:nowrap;">${t}</span>`;
+}
+function extractRow(e){
+  return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);font-family:var(--mono);font-size:11px;">
+    <span style="color:#79c0ff;min-width:118px;flex-shrink:0;">${e.field}</span>
+    <span style="color:#e6edf3;flex:1;line-height:1.4;">${escapeHtml(e.val)}</span>
+    ${methodPill(e.method)}
+  </div>`;
+}
+function renderSource(s){
+  return `
+    <div class="dw-sec-label">Raw input</div>
+    <pre class="code"><span class="file">${escapeHtml(s.file)}</span>${escapeHtml(s.raw)}</pre>
+    <div class="dw-sec-label">What the adapter extracts → canonical claims (Jane)</div>
+    <div>${s.extracts.map(extractRow).join('')}</div>
+    <div class="dw-sec-label">Messy bits it handles</div>
+    <ul class="edge">${s.gotchas.map(g=>`<li>${g}</li>`).join('')}</ul>`;
+}
+function openSourceDrawer(id){
+  const s=SOURCES[id]; if(!s) return;
+  drawer.style.setProperty('--accent', s.accent);
+  dwNum.textContent = `SOURCE · ${s.kind} · ${s.icon}`;
+  dwTitle.innerHTML = `<span class="accent">${s.label}</span>`;
+  dwTag.textContent = s.file;
+  dwBody.innerHTML = renderSource(s);
+  dwBody.scrollTop = 0;
+  scrim.classList.add('open'); drawer.classList.add('open');
+  currentIdx = -1;
+  document.querySelectorAll('.stage').forEach(e=>e.classList.remove('selected'));
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   BUILD PIPELINE + OUTPUT FIELDS
+   ════════════════════════════════════════════════════════════════════ */
+const pipeEl = document.getElementById('pipe');
+STAGES.forEach((s, i) => {
+  const el = document.createElement('div');
+  el.className = 'stage ' + s.cls;
+  el.dataset.id = s.id;
+  el.innerHTML = `
+    <div class="st-top">
+      <div class="st-title"><span class="st-num">${s.num}</span>${s.title}</div>
+      <span class="st-expand">open ↗</span>
+    </div>
+    <div class="st-desc">${s.short}</div>
+    <div class="st-badges">${s.badges.map(b=>`<span class="badge">${b}</span>`).join('')}</div>`;
+  el.addEventListener('click', () => openDrawer(s.id));
+  pipeEl.appendChild(el);
+  if (i < STAGES.length - 1) {
+    const c = document.createElement('div');
+    c.className = 'connector';
+    c.innerHTML = `<span class="pkt" data-gap="${i}"></span><span class="arr"></span>`;
+    pipeEl.appendChild(c);
+  }
+});
+
+const profEl = document.getElementById('profileFields');
+PROFILE.forEach(f => {
+  const d = document.createElement('div');
+  d.className = 'fld'; d.dataset.k = f.k;
+  d.innerHTML = `<span class="fn">${f.k}</span><span class="fv ${f.cls||''}">${f.v}</span>` +
+    (f.conf!==undefined ? `<div class="conf-bar" style="width:100%"><i data-conf="${f.conf}"></i></div>` : '');
+  profEl.appendChild(d);
+});
+
+/* ════════════════════════════════════════════════════════════════════
+   DRAWER
+   ════════════════════════════════════════════════════════════════════ */
+const scrim=document.getElementById('scrim'), drawer=document.getElementById('drawer');
+const dwNum=document.getElementById('dwNum'), dwTitle=document.getElementById('dwTitle'),
+      dwTag=document.getElementById('dwTag'), dwBody=document.getElementById('dwBody');
+let currentIdx = -1;
+
+function openDrawer(id){
+  const i = STAGES.findIndex(s=>s.id===id); if(i<0) return;
+  const s = STAGES[i]; currentIdx = i;
+  drawer.style.setProperty('--accent', s.accent);
+  dwNum.textContent = `STAGE ${s.num} ${'·'} ${s.icon}`;
+  dwTitle.innerHTML = `<span class="accent">${s.title}</span>`;
+  dwTag.textContent = s.tag;
+  dwBody.innerHTML = s.body;
+  dwBody.scrollTop = 0;
+  scrim.classList.add('open'); drawer.classList.add('open');
+  document.querySelectorAll('.stage').forEach(e=>e.classList.toggle('selected', e.dataset.id===id));
+}
+function closeDrawer(){
+  scrim.classList.remove('open'); drawer.classList.remove('open'); currentIdx=-1;
+  document.querySelectorAll('.stage').forEach(e=>e.classList.remove('selected'));
+  document.querySelectorAll('.src').forEach(e=>e.classList.remove('active','dim'));
+  activeSrc=null;
+}
+document.getElementById('dwClose').addEventListener('click', closeDrawer);
+scrim.addEventListener('click', closeDrawer);
+
+/* ════════════════════════════════════════════════════════════════════
+   SOURCE TRACE
+   ════════════════════════════════════════════════════════════════════ */
+let activeSrc = null;
+document.querySelectorAll('.src').forEach(srcEl=>{
+  srcEl.addEventListener('click', ()=>{
+    const id = srcEl.dataset.src;
+    activeSrc = id;
+    document.querySelectorAll('.src').forEach(e=>{
+      e.classList.toggle('active', e.dataset.src===id);
+      e.classList.toggle('dim', e.dataset.src!==id);
+    });
+    const path = SRC_PATH[id]||[];
+    document.querySelectorAll('.stage').forEach(st=>st.classList.toggle('lit', path.includes(st.dataset.id)));
+    openSourceDrawer(id);   // show the raw data + extracted claims
+  });
+});
+function clearTrace(){
+  activeSrc=null;
+  document.querySelectorAll('.src').forEach(e=>e.classList.remove('active','dim'));
+  document.querySelectorAll('.stage').forEach(e=>e.classList.remove('lit'));
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   RUN ANIMATION  (no Date.now / no RNG — pure setTimeout choreography)
+   ════════════════════════════════════════════════════════════════════ */
+let running=false;
+function resetRun(){
+  document.querySelectorAll('.stage').forEach(e=>e.classList.remove('lit'));
+  document.querySelectorAll('.fld').forEach(e=>e.classList.remove('on'));
+  document.querySelectorAll('.conf-bar > i').forEach(i=>i.style.width='0');
+  clearTrace();
+}
+function pulsePacket(gap){
+  const pkt=document.querySelector(`.pkt[data-gap="${gap}"]`); if(!pkt) return;
+  pkt.animate(
+    [{transform:'translate(-50%,-50%) scale(0)',opacity:0,offset:0},
+     {transform:'translate(-50%,-50%) scale(1.3)',opacity:1,offset:.4},
+     {transform:'translate(-50%,140%) scale(.6)',opacity:0,offset:1}],
+    {duration:380, easing:'cubic-bezier(.4,0,.6,1)'});
+}
+function runPipeline(){
+  if(running) return; running=true; resetRun();
+  const seq = STAGES.map(s=>s.id);
+  let t=0; const step=560;
+  seq.forEach((id, i)=>{
+    setTimeout(()=>{
+      document.querySelectorAll('.stage').forEach(e=>e.classList.remove('lit'));
+      const st=document.querySelector(`.stage[data-id="${id}"]`);
+      st.classList.add('lit');
+      st.animate([{transform:'scale(1.012)'},{transform:'scale(1.04)'},{transform:'scale(1.012)'}],{duration:300});
+      (STAGE_FIELDS[id]||[]).forEach(k=>{
+        const f=document.querySelector(`.fld[data-k="${k}"]`); if(f){ f.classList.add('on');
+          const bar=f.querySelector('.conf-bar > i'); if(bar) setTimeout(()=>bar.style.width=(bar.dataset.conf*100)+'%',120);
+        }
+      });
+      if(i<seq.length-1) setTimeout(()=>pulsePacket(i), step*0.55);
+      if(i===seq.length-1){
+        setTimeout(()=>{
+          document.querySelectorAll('.stage').forEach(e=>e.classList.add('lit'));
+          document.querySelectorAll('.fld').forEach(e=>e.classList.add('on'));
+          running=false;
+        }, 420);
+      }
+    }, t);
+    t+=step;
+  });
+}
+document.getElementById('runBtn').addEventListener('click', runPipeline);
+document.getElementById('resetBtn').addEventListener('click', ()=>{ resetRun(); closeDrawer(); });
+
+/* ════════════════════════════════════════════════════════════════════
+   KEYBOARD
+   ════════════════════════════════════════════════════════════════════ */
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){ closeDrawer(); clearTrace(); }
+  else if(e.key==='r'||e.key==='R'){ runPipeline(); }
+  else if(e.key==='p'||e.key==='P'){ openPresenterModal(); }
+  else if(e.key==='ArrowRight'){
+    if(currentIdx<0) openDrawer(STAGES[0].id);
+    else openDrawer(STAGES[Math.min(currentIdx+1,STAGES.length-1)].id);
+  }
+  else if(e.key==='ArrowLeft'){
+    if(currentIdx<0) openDrawer(STAGES[STAGES.length-1].id);
+    else openDrawer(STAGES[Math.max(currentIdx-1,0)].id);
+  }
+});
+
+/* ════════════════════════════════════════════════════════════════════
+   PRESENTER MODE — hidden teleprompter via Document Picture-in-Picture
+   ════════════════════════════════════════════════════════════════════ */
+const modalScrim=document.getElementById('modalScrim');
+function openPresenterModal(){ modalScrim.classList.add('open'); }
+document.getElementById('presBtn').addEventListener('click', openPresenterModal);
+document.getElementById('modalCancel').addEventListener('click', ()=>modalScrim.classList.remove('open'));
+document.getElementById('modalGo').addEventListener('click', ()=>{ modalScrim.classList.remove('open'); launchTeleprompter(); });
+
+/* The demo script as teleprompter cue cards (from DEMO_SCRIPT.md) */
+const SCRIPT = [
+  {cue:'HOOK · 0:00', t:"Candidates show up across six messy sources — recruiter CSV, ATS, GitHub, LinkedIn, notes, a resume. Conflicting, duplicated. Goal: one clean canonical profile, with provenance and a confidence per field. North star: wrong-but-confident is the worst outcome."},
+  {cue:'ARCHITECTURE · 0:45', t:"One rule drives everything: an immutable canonical record, and a separate read-only projection layer. Same engine serves any output schema. One adapter per source — two structured, four unstructured. Pure normalizers: phones to E.164, dates to YYYY-MM, country to ISO-2."},
+  {cue:'PROUD OF · 2:30', t:"One trust table feeds BOTH merge and confidence. Claim score = trust times method factor. Field-source affinity — contact info trusts CSV and ATS; skills trust GitHub and resume; experience trusts LinkedIn and resume. Agreement reinforced with noisy-OR; conflict penalized. One small fixed policy — one place to tune or defend."},
+  {cue:'RUN DEFAULT · 4:00', t:"Run the default config. Watch: WARNING skipping garbage.json — then wrote two profiles. That's robustness. Open the output: Jane merged from six sources, provenance traces every field to source plus method, overall confidence 0.94."},
+  {cue:'EDGE · CONFLICT · 5:30', t:"Edge case one — conflict. Jane's two phones, CSV versus ATS — both kept, both in provenance, phones[0] is the higher-trust CSV one. Years experience: eight from ATS beats nine from notes, with a confidence penalty."},
+  {cue:'EDGE · MORE', t:"Garbage JSON skipped, run completes. Dedup: same Jane across six sources merged by email. Absent field: Sam has no phone or links, becomes null. Un-normalizable: 'call me after 5pm' yields no phone; unknown skills kept but discounted. Nothing invented."},
+  {cue:'LOCATION CALL', t:"Nice detail: LinkedIn's 'SF Bay Area' is more trusted but less complete than ATS's 'San Francisco, CA, US'. I rank location by completeness first — so we keep the country."},
+  {cue:'RUN CUSTOM · 7:30', t:"Custom config — same engine, different shape. Rename and path DSL: primary_email from emails[0], skills from skills[].name. Normalize re-applied at projection. on_missing: Jane has github, Sam's github key is omitted."},
+  {cue:'CLOSE · 9:00', t:"Deterministic, explainable, robust, every value traceable. Fixed tables plus stable sorts plus content-hash id equals byte-stable output — the gold test runs the pipeline twice and asserts equality. 53 tests green. The trust policy and the canonical-projection split are the two ideas everything hangs off."},
+];
+
+function teleprompterHTML(){
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    :root{--g:#3fb950;--p:#bc8cff;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#05070b;color:#e6edf3;font-family:-apple-system,'Segoe UI',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+    .bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0c1018;border-bottom:1px solid #1f2630;flex-shrink:0;}
+    .bar button{font:600 12px system-ui;color:#e6edf3;background:#161b24;border:1px solid #2a323d;border-radius:6px;padding:5px 10px;cursor:pointer;}
+    .bar button:hover{border-color:#58a6ff;}
+    .bar button.go{background:linear-gradient(135deg,#1f6feb,#388bfd);border-color:#388bfd;}
+    .bar .spd{margin-left:auto;font:11px ui-monospace,monospace;color:#8b949e;display:flex;align-items:center;gap:6px;}
+    .bar input[type=range]{width:90px;accent-color:#bc8cff;}
+    .scroller{flex:1;overflow-y:auto;padding:40vh 26px 60vh;scroll-behavior:smooth;}
+    .scroller::-webkit-scrollbar{width:0;}
+    .card{margin:0 auto 42px;max-width:680px;opacity:.32;transition:opacity .4s,transform .4s;transform:scale(.98);}
+    .card.active{opacity:1;transform:scale(1);}
+    .cue{font:700 11px ui-monospace,monospace;letter-spacing:1.5px;color:var(--p);text-transform:uppercase;margin-bottom:10px;}
+    .card.active .cue{color:var(--g);}
+    .txt{font-size:30px;line-height:1.45;font-weight:600;letter-spacing:-0.3px;}
+    .foot{padding:6px 12px;background:#0c1018;border-top:1px solid #1f2630;font:10px ui-monospace,monospace;color:#5a626c;text-align:center;flex-shrink:0;}
+  </style></head><body>
+    <div class="bar">
+      <button class="go" id="play">▶ Play</button>
+      <button id="up">↑</button><button id="down">↓</button>
+      <button id="top">⤒ Top</button>
+      <span class="spd">speed <input id="speed" type="range" min="10" max="120" value="45"></span>
+    </div>
+    <div class="scroller" id="sc">
+      ${SCRIPT.map((s,i)=>`<div class="card" data-i="${i}"><div class="cue">${s.cue}</div><div class="txt">${s.t}</div></div>`).join('')}
+    </div>
+    <div class="foot">PRESENTER ONLY · keep this window outside your recording region</div>
+  </body></html>`;
+}
+
+function wireTeleprompter(doc){
+  const sc=doc.getElementById('sc');
+  const cards=[...doc.querySelectorAll('.card')];
+  let playing=false, raf=null, speed=45;
+  doc.getElementById('speed').addEventListener('input', e=>speed=+e.target.value);
+  function tick(){ if(!playing) return; sc.scrollTop += speed/60; markActive(); raf=doc.defaultView.requestAnimationFrame(tick); }
+  function markActive(){
+    const mid=sc.scrollTop + sc.clientHeight*0.42;
+    let best=0,bd=1e9;
+    cards.forEach((c,i)=>{ const cc=c.offsetTop + c.offsetHeight/2; const d=Math.abs(cc-mid); if(d<bd){bd=d;best=i;} });
+    cards.forEach((c,i)=>c.classList.toggle('active', i===best));
+  }
+  const playBtn=doc.getElementById('play');
+  playBtn.addEventListener('click', ()=>{ playing=!playing; playBtn.textContent=playing?'⏸ Pause':'▶ Play'; playBtn.classList.toggle('go',!playing); if(playing) tick(); });
+  doc.getElementById('up').addEventListener('click', ()=>{ sc.scrollTop-=220; markActive(); });
+  doc.getElementById('down').addEventListener('click', ()=>{ sc.scrollTop+=220; markActive(); });
+  doc.getElementById('top').addEventListener('click', ()=>{ sc.scrollTop=0; markActive(); });
+  sc.addEventListener('scroll', markActive);
+  markActive();
+}
+
+async function launchTeleprompter(){
+  // Preferred: Document Picture-in-Picture (Chrome/Edge 116+) — a true separate window.
+  if ('documentPictureInPicture' in window) {
+    try {
+      const pip = await documentPictureInPicture.requestWindow({ width: 460, height: 680 });
+      pip.document.write(teleprompterHTML());
+      pip.document.close();
+      wireTeleprompter(pip.document);
+      return;
+    } catch (e) { /* fall through to popup */ }
+  }
+  // Fallback: a separate popup window (also excluded from window/region capture).
+  const win = window.open('', 'teleprompter', 'width=460,height=680');
+  if (!win) { alert('Popup blocked — allow popups for the teleprompter window.'); return; }
+  win.document.write(teleprompterHTML());
+  win.document.close();
+  wireTeleprompter(win.document);
+}
+</script>
+</body>
+</html>

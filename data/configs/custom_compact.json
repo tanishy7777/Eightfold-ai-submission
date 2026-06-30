@@ -1,0 +1,15 @@
+{
+  "_comment": "Custom shape. Mirrors the assignment example, plus fields that demonstrate on_missing (omit vs null).",
+  "fields": [
+    { "path": "full_name",     "type": "string",   "required": true },
+    { "path": "primary_email", "from": "emails[0]",        "type": "string",   "required": true },
+    { "path": "phone",         "from": "phones[0]",        "type": "string",   "normalize": "E164" },
+    { "path": "skills",        "from": "skills[].name",    "type": "string[]", "normalize": "canonical" },
+    { "path": "country",       "from": "location.country", "type": "string" },
+    { "path": "github",        "from": "links.github",     "type": "string",   "on_missing": "omit" },
+    { "path": "twitter",       "from": "links.other[0]",   "type": "string",   "on_missing": "null" }
+  ],
+  "include_confidence": true,
+  "include_provenance": false,
+  "on_missing": "null"
+}

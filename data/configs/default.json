@@ -1,0 +1,6 @@
+{
+  "_comment": "Default config: no 'fields' means emit the FULL canonical profile. Both toggles on.",
+  "include_provenance": true,
+  "include_confidence": true,
+  "on_missing": "null"
+}
